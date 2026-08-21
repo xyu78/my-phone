@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AI 仿生桌面聊天机</title>
+<title>AI 仿生桌面聊天机 - 社交增强版</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style id="custom-css">
   /* 用户自定义的美化 CSS 会注入到这里 */
@@ -15,39 +15,24 @@
   }
   
   body {
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    background: #333;
-    font-family: -apple-system, Helvetica, sans-serif;
+    margin: 0; padding: 0; display: flex; justify-content: center;
+    background: #333; font-family: -apple-system, Helvetica, sans-serif;
   }
 
   /* 手机容器 */
   #phone {
-    width: 100vw;
-    height: 100vh;
-    max-width: 430px;
-    background: var(--bg-image);
-    background-size: cover;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    width: 100vw; height: 100vh; max-width: 430px;
+    background: var(--bg-image); background-size: cover;
+    position: relative; overflow: hidden; display: flex; flex-direction: column;
   }
 
   /* 顶部云朵时间挂件 */
   #cloud-widget {
-    margin: 40px 20px 20px;
-    background: var(--widget-bg);
-    border-radius: 40px;
-    padding: 20px 25px;
+    margin: 40px 20px 20px; background: var(--widget-bg);
+    border-radius: 40px; padding: 20px 25px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    backdrop-filter: blur(10px);
-    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    backdrop-filter: blur(10px); cursor: pointer;
   }
   .time-area h1 { margin: 0; font-size: 36px; color: #333; }
   .time-area p { margin: 5px 0 0; color: #666; font-size: 14px; }
@@ -57,134 +42,98 @@
 
   /* 桌面图标区域 */
   #desktop-apps {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px 10px;
-    padding: 20px;
-    flex-grow: 1;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 20px 10px; padding: 20px; flex-grow: 1;
   }
   .app-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: white;
-    font-size: 12px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    color: white; font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); cursor: pointer;
   }
   .app-icon .icon-box {
-    width: 55px;
-    height: 55px;
-    border-radius: 14px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 30px;
-    margin-bottom: 5px;
-    background: #fff;
-    color: #333;
+    width: 55px; height: 55px; border-radius: 14px; display: flex;
+    justify-content: center; align-items: center; font-size: 30px;
+    margin-bottom: 5px; background: #fff; color: #333;
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
   }
   .bg-wechat { background: #07C160 !important; color: white !important; }
-  .bg-twitter { background: #1DA1F2 !important; color: white !important; }
+  .bg-x { background: #000000 !important; color: white !important; } /* 更新为X的黑色 */
   .bg-ins { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285AEB 90%) !important; color: white !important; }
 
   /* 底部 Dock 栏 */
   #dock {
-    background: rgba(255,255,255,0.3);
-    backdrop-filter: blur(15px);
-    margin: 15px;
-    border-radius: 30px;
-    padding: 15px;
-    display: flex;
-    justify-content: space-around;
+    background: rgba(255,255,255,0.3); backdrop-filter: blur(15px);
+    margin: 15px; border-radius: 30px; padding: 15px;
+    display: flex; justify-content: space-around;
   }
 
-  /* 聊天界面 (仿微信) */
-  #chat-app {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #ededed;
-    transition: top 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    z-index: 100;
+  /* 统一的 APP 全屏界面层 (Chat, X, Ins) */
+  .app-view {
+    position: absolute; top: 100%; left: 0; width: 100%; height: 100%;
+    background: #ededed; transition: top 0.3s ease;
+    display: flex; flex-direction: column; z-index: 100;
   }
-  #chat-app.active { top: 0; }
+  .app-view.active { top: 0; }
   
-  .chat-header {
-    background: #ededed;
-    padding: 40px 15px 15px;
-    display: flex;
-    align-items: center;
-    font-size: 18px;
-    font-weight: bold;
-    border-bottom: 1px solid #ddd;
+  .app-header {
+    background: #ededed; padding: 40px 15px 15px; display: flex;
+    align-items: center; font-size: 18px; font-weight: bold; border-bottom: 1px solid #ddd;
+    position: relative;
   }
-  .chat-header i { margin-right: 15px; cursor: pointer; font-size: 20px; }
+  .app-header i.back-btn { margin-right: 15px; cursor: pointer; font-size: 20px; }
+  .header-actions { position: absolute; right: 15px; }
+  .header-actions button {
+    padding: 6px 12px; border: none; border-radius: 20px;
+    background: #333; color: white; cursor: pointer; font-weight: bold;
+  }
+
+  /* 滚动内容区 */
+  .scroll-content { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
   
-  #chat-box {
-    flex-grow: 1;
-    padding: 15px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .message {
-    display: flex;
-    margin-bottom: 20px;
-    max-width: 85%;
-  }
+  /* --- 微信私聊样式 --- */
+  .message { display: flex; margin-bottom: 20px; max-width: 85%; }
   .message.user { align-self: flex-end; flex-direction: row-reverse; }
   .message.ai { align-self: flex-start; }
-  
-  .avatar {
-    width: 40px; height: 40px; border-radius: 5px; background: #ccc;
-    display: flex; justify-content: center; align-items: center; color: white;
-  }
+  .avatar { width: 40px; height: 40px; border-radius: 5px; background: #ccc; display: flex; justify-content: center; align-items: center; color: white; }
   .message.user .avatar { background: #07C160; margin-left: 10px; }
-  .message.ai .avatar { background: #1DA1F2; margin-right: 10px; }
-  
-  .bubble {
-    padding: 10px 15px;
-    border-radius: 8px;
-    font-size: 16px;
-    line-height: 1.4;
-    word-break: break-all;
-  }
+  .message.ai .avatar { background: #000; margin-right: 10px; } /* AI头像跟随X变黑 */
+  .bubble { padding: 10px 15px; border-radius: 8px; font-size: 16px; line-height: 1.4; word-break: break-all; }
   .message.user .bubble { background: #95ec69; }
   .message.ai .bubble { background: #fff; }
 
-  /* 聊天输入区 */
   .chat-input-area {
-    background: #f7f7f7;
-    padding: 10px 15px 30px;
-    border-top: 1px solid #ddd;
-    display: flex;
-    gap: 10px;
-    align-items: center;
+    background: #f7f7f7; padding: 10px 15px 30px; border-top: 1px solid #ddd; display: flex; gap: 10px; align-items: center;
   }
-  .chat-input-area input {
-    flex-grow: 1; padding: 10px; border: none; border-radius: 5px; font-size: 16px; outline: none;
-  }
-  .btn-send, .btn-generate {
-    padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold;
-  }
-  .btn-send { background: #07C160; }
-  .btn-generate { background: #1DA1F2; }
+  .chat-input-area input { flex-grow: 1; padding: 10px; border: none; border-radius: 5px; font-size: 16px; outline: none; }
+  .btn-send { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; background: #07C160; font-weight: bold; }
+  .btn-generate { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; background: #000; font-weight: bold; }
 
+  /* --- X 信息流样式 --- */
+  #x-view { background: #000; color: #fff; }
+  #x-view .app-header { background: #000; color: #fff; border-bottom: 1px solid #333; }
+  #x-view .header-actions button { background: #1DA1F2; }
+  .x-post { display: flex; gap: 10px; padding: 15px 0; border-bottom: 1px solid #333; }
+  .x-avatar { width: 45px; height: 45px; border-radius: 50%; background: #333; flex-shrink: 0; }
+  .x-content { flex-grow: 1; }
+  .x-name { font-weight: bold; font-size: 15px; margin-bottom: 5px; }
+  .x-handle { color: #888; font-weight: normal; font-size: 14px; }
+  .x-text { font-size: 15px; line-height: 1.5; margin-bottom: 10px; }
+  .x-actions { display: flex; justify-content: space-between; color: #888; max-width: 80%; }
+
+  /* --- Instagram 信息流样式 --- */
+  #ins-view { background: #fff; color: #000; }
+  #ins-view .app-header { background: #fff; color: #000; border-bottom: 1px solid #dbdbdb; }
+  #ins-view .header-actions button { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+  .ins-post { margin-bottom: 25px; border-bottom: 1px solid #dbdbdb; padding-bottom: 15px; }
+  .ins-header { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+  .ins-avatar { width: 32px; height: 32px; border-radius: 50%; background: #ddd; }
+  .ins-name { font-weight: bold; font-size: 14px; }
+  .ins-image { width: 100%; height: 350px; background: #eee; border-radius: 5px; object-fit: cover; }
+  .ins-actions { padding: 10px 0; font-size: 22px; display: flex; gap: 15px; }
+  .ins-caption { font-size: 14px; line-height: 1.5; }
+  
   /* 弹窗样式 */
-  .modal {
-    display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center;
-  }
-  .modal-content {
-    background: white; width: 80%; padding: 20px; border-radius: 15px;
-  }
+  .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
+  .modal-content { background: white; width: 80%; padding: 20px; border-radius: 15px; }
   .modal textarea, .modal input { width: 100%; margin: 10px 0; padding: 8px; box-sizing: border-box; }
 </style>
 </head>
@@ -193,218 +142,204 @@
 <div id="phone">
   <!-- 桌面 -->
   <div id="cloud-widget" onclick="openModal('weatherModal')">
-    <div class="time-area">
-      <h1 id="clock">00:00</h1>
-      <p id="date">1月1日 星期一</p>
-    </div>
-    <div class="weather-area">
-      <i class="fa-solid fa-sun"></i>
-      <p id="city-weather">北京 | 25°C</p>
-    </div>
+    <div class="time-area"><h1 id="clock">00:00</h1><p id="date">1月1日 星期一</p></div>
+    <div class="weather-area"><i class="fa-solid fa-sun"></i><p id="city-weather">北京 | 25°C</p></div>
   </div>
 
   <div id="desktop-apps">
-    <div class="app-icon" onclick="openChat()">
-      <div class="icon-box bg-wechat"><i class="fa-brands fa-weixin"></i></div>
-      <span>私聊</span>
+    <div class="app-icon" onclick="openApp('chat-view')">
+      <div class="icon-box bg-wechat"><i class="fa-brands fa-weixin"></i></div><span>私聊</span>
     </div>
-    <div class="app-icon">
-      <div class="icon-box bg-twitter"><i class="fa-brands fa-twitter"></i></div>
-      <span>Twitter</span>
+    <!-- 升级为 X -->
+    <div class="app-icon" onclick="openApp('x-view')">
+      <div class="icon-box bg-x"><i class="fa-brands fa-x-twitter"></i></div><span>X</span>
     </div>
-    <div class="app-icon">
-      <div class="icon-box bg-ins"><i class="fa-brands fa-instagram"></i></div>
-      <span>Instagram</span>
+    <!-- 升级 Instagram 可点击 -->
+    <div class="app-icon" onclick="openApp('ins-view')">
+      <div class="icon-box bg-ins"><i class="fa-brands fa-instagram"></i></div><span>Instagram</span>
     </div>
   </div>
 
   <div id="dock">
-    <div class="app-icon" onclick="openModal('presetModal')">
-      <div class="icon-box"><i class="fa-solid fa-robot"></i></div>
-      <span>预设</span>
-    </div>
-    <div class="app-icon" onclick="openModal('beautyModal')">
-      <div class="icon-box"><i class="fa-solid fa-palette"></i></div>
-      <span>美化</span>
-    </div>
-    <div class="app-icon">
-      <div class="icon-box"><i class="fa-solid fa-gear"></i></div>
-      <span>设置</span>
-    </div>
+    <div class="app-icon" onclick="openModal('presetModal')"><div class="icon-box"><i class="fa-solid fa-robot"></i></div><span>预设</span></div>
+    <div class="app-icon" onclick="openModal('beautyModal')"><div class="icon-box"><i class="fa-solid fa-palette"></i></div><span>美化</span></div>
+    <div class="app-icon"><div class="icon-box"><i class="fa-solid fa-gear"></i></div><span>设置</span></div>
   </div>
 
-  <!-- 聊天界面 -->
-  <div id="chat-app">
-    <div class="chat-header">
-      <i class="fa-solid fa-chevron-left" onclick="closeChat()"></i>
-      <span>人类好朋友</span>
+  <!-- 1. 微信私聊界面 -->
+  <div id="chat-view" class="app-view">
+    <div class="app-header">
+      <i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('chat-view')"></i><span>人类好朋友</span>
     </div>
-    <div id="chat-box">
-      <!-- 聊天记录将渲染在这里 -->
-    </div>
+    <div id="chat-box" class="scroll-content"></div>
     <div class="chat-input-area">
       <input type="text" id="msg-input" placeholder="发消息..." onkeypress="handleEnter(event)">
       <button class="btn-send" onclick="sendMessage()">发送</button>
-      <button class="btn-generate" onclick="generateAIResponse()">生成</button>
+      <button class="btn-generate" onclick="generateChat()">生成回复</button>
     </div>
   </div>
 
-  <!-- 弹窗区 -->
-  <!-- 1. 城市天气设置 -->
-  <div class="modal" id="weatherModal">
-    <div class="modal-content">
-      <h3>设置城市与天气</h3>
-      <input type="text" id="input-city" placeholder="例如: 杭州 | 阴天 18°C">
-      <button onclick="saveWeather()">保存</button>
-      <button onclick="closeModal('weatherModal')">关闭</button>
+  <!-- 2. X 社交界面 -->
+  <div id="x-view" class="app-view">
+    <div class="app-header">
+      <i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('x-view')"></i>
+      <i class="fa-brands fa-x-twitter" style="margin: 0 auto; font-size:24px;"></i>
+      <div class="header-actions">
+        <button id="btn-x" onclick="generateXPost()">刷推文</button>
+      </div>
+    </div>
+    <div id="x-feed" class="scroll-content">
+      <!-- 初始默认推文 -->
+      <div class="x-post">
+        <img src="https://ui-avatars.com/api/?name=E&background=random" class="x-avatar">
+        <div class="x-content">
+          <div class="x-name">Elon Parody <span class="x-handle">@NotTheRealElon</span></div>
+          <div class="x-text">欢迎来到你的虚拟 X 空间！点击右上角的“刷推文”，我会用 AI 给你生成一些真实的网友吐槽。</div>
+          <div class="x-actions">
+            <i class="fa-regular fa-comment"></i><i class="fa-solid fa-retweet"></i><i class="fa-regular fa-heart"></i><i class="fa-solid fa-chart-simple"></i>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- 2. 预设 (规则/限制词) -->
-  <div class="modal" id="presetModal">
-    <div class="modal-content">
-      <h3>AI 预设规则 (System Prompt 附加)</h3>
-      <p style="font-size:12px;color:gray;">在这里加入限制词或特定回复规则</p>
-      <textarea id="input-preset" rows="5" placeholder="例如：你必须在每句话结尾加喵。限制词：不能提到苹果。"></textarea>
-      <input type="text" id="api-key" placeholder="输入 OpenAI API Key (必填)">
-      <button onclick="savePreset()">保存</button>
-      <button onclick="closeModal('presetModal')">关闭</button>
+  <!-- 3. Instagram 社交界面 -->
+  <div id="ins-view" class="app-view">
+    <div class="app-header">
+      <i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('ins-view')"></i>
+      <span style="font-family: cursive; font-size: 20px; font-weight: normal; margin-left: 10px;">Instagram</span>
+      <div class="header-actions">
+        <button id="btn-ins" onclick="generateInsPost()">刷动态</button>
+      </div>
+    </div>
+    <div id="ins-feed" class="scroll-content">
+      <!-- 初始默认动态 -->
+      <div class="ins-post">
+        <div class="ins-header">
+          <img src="https://ui-avatars.com/api/?name=V&background=random" class="ins-avatar">
+          <div class="ins-name">virtual_life</div>
+        </div>
+        <img src="https://picsum.photos/400/400?random=0" class="ins-image">
+        <div class="ins-actions"><i class="fa-regular fa-heart"></i><i class="fa-regular fa-comment"></i><i class="fa-regular fa-paper-plane"></i></div>
+        <div class="ins-caption"><span class="ins-name">virtual_life</span> 点击右上角的“刷动态”，AI会为你生成唯美配文，同时拉取随机的高清照片！✨📸</div>
+      </div>
     </div>
   </div>
 
-  <!-- 3. 美化 (注入自定义 CSS) -->
-  <div class="modal" id="beautyModal">
-    <div class="modal-content">
-      <h3>美化 (注入 CSS)</h3>
-      <textarea id="input-css" rows="5" placeholder="body { background: red; }"></textarea>
-      <button onclick="saveBeauty()">应用美化</button>
-      <button onclick="closeModal('beautyModal')">关闭</button>
-    </div>
-  </div>
+  <!-- 弹窗区 (天气/预设/美化) -->
+  <div class="modal" id="weatherModal"><div class="modal-content"><h3>设置城市与天气</h3><input type="text" id="input-city" placeholder="杭州 | 阴天 18°C"><button onclick="saveWeather()">保存</button><button onclick="closeModal('weatherModal')">关闭</button></div></div>
+  <div class="modal" id="presetModal"><div class="modal-content"><h3>AI 预设规则与密钥</h3><textarea id="input-preset" rows="4" placeholder="例如：你必须在每句话结尾加喵。限制词：不能提到苹果。"></textarea><input type="text" id="api-key" placeholder="输入 OpenAI API Key (必填)"><button onclick="savePreset()">保存</button><button onclick="closeModal('presetModal')">关闭</button></div></div>
+  <div class="modal" id="beautyModal"><div class="modal-content"><h3>美化 (注入 CSS)</h3><textarea id="input-css" rows="4" placeholder="body { background: red; }"></textarea><button onclick="saveBeauty()">应用美化</button><button onclick="closeModal('beautyModal')">关闭</button></div></div>
 </div>
 
 <script>
-  // ---------------- 1. 挂件时间感知逻辑 ----------------
+  // --- 挂件与基础交互 ---
   function updateTime() {
     const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('clock').innerText = `${hours}:${minutes}`;
-    
-    const month = now.getMonth() + 1;
-    const date = now.getDate();
+    document.getElementById('clock').innerText = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-    const day = days[now.getDay()];
-    document.getElementById('date').innerText = `${month}月${date}日 ${day}`;
+    document.getElementById('date').innerText = `${now.getMonth()+1}月${now.getDate()}日 ${days[now.getDay()]}`;
   }
-  setInterval(updateTime, 1000);
-  updateTime();
-
-  // ---------------- 2. 弹窗控制与保存 ----------------
+  setInterval(updateTime, 1000); updateTime();
+  
   function openModal(id) { document.getElementById(id).style.display = 'flex'; }
   function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+  function saveWeather() { const v=document.getElementById('input-city').value; if(v) document.getElementById('city-weather').innerText = v; closeModal('weatherModal'); }
+  function saveBeauty() { document.getElementById('custom-css').innerHTML = document.getElementById('input-css').value; closeModal('beautyModal'); }
   
-  function saveWeather() {
-    const val = document.getElementById('input-city').value;
-    if(val) document.getElementById('city-weather').innerText = val;
-    closeModal('weatherModal');
-  }
+  let customRule = "", apiKey = "";
+  function savePreset() { customRule = document.getElementById('input-preset').value; apiKey = document.getElementById('api-key').value; closeModal('presetModal'); alert("设置已保存"); }
 
-  function saveBeauty() {
-    const css = document.getElementById('input-css').value;
-    document.getElementById('custom-css').innerHTML = css;
-    closeModal('beautyModal');
-  }
+  // --- 应用界面切换 ---
+  function openApp(id) { document.getElementById(id).classList.add('active'); }
+  function closeApp(id) { document.getElementById(id).classList.remove('active'); }
 
-  let customRule = "";
-  let apiKey = "";
-  function savePreset() {
-    customRule = document.getElementById('input-preset').value;
-    apiKey = document.getElementById('api-key').value;
-    closeModal('presetModal');
-    alert("预设和 API Key 已保存（仅在本地网页生效）");
-  }
-
-  // ---------------- 3. 聊天与 API 逻辑 ----------------
-  let messages = []; // 本地聊天记录
-  const chatBox = document.getElementById('chat-box');
-  const msgInput = document.getElementById('msg-input');
-
-  function openChat() { document.getElementById('chat-app').classList.add('active'); }
-  function closeChat() { document.getElementById('chat-app').classList.remove('active'); }
-
-  function renderMessage(text, sender) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${sender}`;
-    const avatarIcon = sender === 'user' ? 'fa-user' : 'fa-robot';
-    msgDiv.innerHTML = `
-      <div class="avatar"><i class="fa-solid ${avatarIcon}"></i></div>
-      <div class="bubble">${text}</div>
-    `;
-    chatBox.appendChild(msgDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
-  }
-
-  function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
-
-  function sendMessage() {
-    const text = msgInput.value.trim();
-    if (!text) return;
-    
-    // 渲染到屏幕左边(如果想改左边，CSS里把 flex-direction-reverse 去掉，这里保持仿微信右边)
-    renderMessage(text, 'user');
-    messages.push({ role: 'user', content: text });
-    msgInput.value = '';
-  }
-
-  async function generateAIResponse() {
-    if (!apiKey) {
-      alert("请先在底部的【预设】面板中输入 API Key！");
-      return;
-    }
-    if (messages.length === 0) return;
-
-    // 按钮变成加载状态
-    const btn = document.querySelector('.btn-generate');
-    btn.innerText = '生成中...';
-
-    // 核心系统提示词 (Prompt)
-    let systemPrompt = `你现在是一个真实的、有血有肉的人类，正在通过微信和你的好朋友私聊。绝不能提到你是AI。回复要口语化，带一点情绪。仔细阅读前面的聊天记录，像真人一样对我说的话做出真实反应，字数多一点，有话头，模拟生活感。`;
-    if (customRule) systemPrompt += `\n额外限制与规则：${customRule}`;
-
-    // 截取前五次对话历史 (即最后10条消息)
-    const contextMessages = messages.slice(-10);
-    const apiMessages = [
-      { role: 'system', content: systemPrompt },
-      ...contextMessages
-    ];
-
+  // --- 统一的 OpenAI 请求工具函数 ---
+  async function callOpenAI(messages, btnElement) {
+    if (!apiKey) { alert("请先在【预设】面板中输入 API Key！"); return null; }
+    const oldText = btnElement.innerText;
+    btnElement.innerText = "生成中...";
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo', // 你可以修改为 gpt-4 或 gpt-4o
-          messages: apiMessages,
-          temperature: 0.8
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'gpt-3.5-turbo', messages: messages, temperature: 0.85 })
       });
+      const data = await res.json();
+      btnElement.innerText = oldText;
+      if(data.error) { alert("API错误: " + data.error.message); return null; }
+      return data.choices[0].message.content;
+    } catch (e) {
+      alert("网络错误，请检查网络或 API 配置。");
+      btnElement.innerText = oldText;
+      return null;
+    }
+  }
 
-      const data = await response.json();
-      if(data.error) {
-        alert("API 错误: " + data.error.message);
-      } else {
-        const aiText = data.choices[0].message.content;
-        renderMessage(aiText, 'ai');
-        messages.push({ role: 'assistant', content: aiText });
-      }
-    } catch (err) {
-      alert("网络请求失败，请检查是否需要魔法上网或 API 地址是否正确。");
-    } finally {
-      btn.innerText = '生成';
+  // --- 1. 私聊逻辑 ---
+  let chatMsgs = [];
+  function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
+  function sendMessage() {
+    const text = document.getElementById('msg-input').value.trim();
+    if(!text) return;
+    const box = document.getElementById('chat-box');
+    box.innerHTML += `<div class="message user"><div class="avatar"><i class="fa-solid fa-user"></i></div><div class="bubble">${text}</div></div>`;
+    chatMsgs.push({ role: 'user', content: text });
+    document.getElementById('msg-input').value = '';
+    box.scrollTop = box.scrollHeight;
+  }
+  async function generateChat() {
+    if (chatMsgs.length === 0) return;
+    let sys = `你是一个真实的人类，通过微信和好朋友私聊。别提你是AI。回复口语化。阅读上文有话头地回复。${customRule}`;
+    const apiMsgs = [{ role: 'system', content: sys }, ...chatMsgs.slice(-10)];
+    const reply = await callOpenAI(apiMsgs, document.querySelector('.btn-generate'));
+    if (reply) {
+      document.getElementById('chat-box').innerHTML += `<div class="message ai"><div class="avatar"><i class="fa-solid fa-robot"></i></div><div class="bubble">${reply}</div></div>`;
+      chatMsgs.push({ role: 'assistant', content: reply });
+      document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+    }
+  }
+
+  // --- 2. X 生成逻辑 ---
+  async function generateXPost() {
+    const sys = "你现在是一个经常使用推特（X）的真实人类。请生成一条简短的推文，可以是吐槽、搞笑观点、或者生活碎片。直接输出内容，不需要加引号。不超过50个字。";
+    const reply = await callOpenAI([{role: 'system', content: sys}], document.getElementById('btn-x'));
+    if (reply) {
+      const feed = document.getElementById('x-feed');
+      // 随机生成用户名和头像字母
+      const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26)); 
+      const html = `
+      <div class="x-post">
+        <img src="https://ui-avatars.com/api/?name=${letter}&background=random" class="x-avatar">
+        <div class="x-content">
+          <div class="x-name">User_${letter} <span class="x-handle">@user_${letter.toLowerCase()}${Math.floor(Math.random()*1000)}</span></div>
+          <div class="x-text">${reply}</div>
+          <div class="x-actions"><i class="fa-regular fa-comment"></i><i class="fa-solid fa-retweet"></i><i class="fa-regular fa-heart"></i><i class="fa-solid fa-chart-simple"></i></div>
+        </div>
+      </div>`;
+      feed.insertAdjacentHTML('afterbegin', html); // 插入在最前面
+    }
+  }
+
+  // --- 3. Instagram 生成逻辑 ---
+  async function generateInsPost() {
+    const sys = "你是一个热爱生活的年轻人类。请写一段带有生活气息的Instagram配文（比如分享风景、美食、看展等），可以带几个恰当的emoji和Hashtag标签。直接输出配文内容，不要加引号。";
+    const reply = await callOpenAI([{role: 'system', content: sys}], document.getElementById('btn-ins'));
+    if (reply) {
+      const feed = document.getElementById('ins-feed');
+      const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      const r = Math.floor(Math.random() * 10000); // 确保每次拿到的假图片都不一样
+      const html = `
+      <div class="ins-post">
+        <div class="ins-header">
+          <img src="https://ui-avatars.com/api/?name=${letter}&background=random" class="ins-avatar">
+          <div class="ins-name">life_of_${letter.toLowerCase()}</div>
+        </div>
+        <img src="https://picsum.photos/400/400?random=${r}" class="ins-image">
+        <div class="ins-actions"><i class="fa-regular fa-heart"></i><i class="fa-regular fa-comment"></i><i class="fa-regular fa-paper-plane"></i></div>
+        <div class="ins-caption"><span class="ins-name">life_of_${letter.toLowerCase()}</span> ${reply}</div>
+      </div>`;
+      feed.insertAdjacentHTML('afterbegin', html);
     }
   }
 </script>
