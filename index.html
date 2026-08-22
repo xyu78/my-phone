@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI 拟真生态手机 - 极致 UI 重构版</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg-image: url('https://picsum.photos/800/1600?random=wallpaper');
+    --sys-blue: #007AFF; --sys-green: #34C759; --sys-red: #FF3B30; --sys-gray: #F2F2F7;
+    --wc-green: #07C160; --x-blue: #1D9BF0; --yt-red: #FF0000; --qq-blue: #12B7F5; --xhs-red: #FE2C55;
+    --touch-size: 44px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  body { display: flex; justify-content: center; align-items: center; background: #111; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, sans-serif; height: 100vh; overflow: hidden; }
+  
+  /* 手机外壳与屏幕 */
+  #phone-case { width: 100vw; height: 100vh; max-width: 430px; max-height: 932px; background: #000; border-radius: 50px; padding: 12px; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 0 20px rgba(0,0,0,0.8); position: relative; }
+  @media (max-width: 450px) { #phone-case { border-radius: 0; padding: 0; box-shadow: none; max-height: 100vh; } }
+  #screen { width: 100%; height: 100%; border-radius: 40px; overflow: hidden; position: relative; background: var(--bg-image) center/cover; display: flex; flex-direction: column; }
+  @media (max-width: 450px) { #screen { border-radius: 0; } }
+
+  /* 状态栏 & 灵动岛 */
+  .status-bar { height: 44px; width: 100%; position: absolute; top: 0; z-index: 9999; display: flex; justify-content: space-between; padding: 0 25px; align-items: center; color: #fff; font-size: 14px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.5); pointer-events: none; transition: color 0.3s; }
+  .status-icons i { margin-left: 5px; font-size: 12px; }
+  .notch { width: 120px; height: 35px; background: #000; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); border-radius: 20px; z-index: 10000; }
+  .home-indicator { width: 35%; height: 5px; background: #fff; border-radius: 10px; position: absolute; bottom: 8px; left: 32.5%; z-index: 10000; mix-blend-mode: difference; cursor: pointer; transition: transform 0.2s; }
+  .home-indicator:active { transform: scale(0.9); }
+
+  /* 桌面网格 */
+  #desktop-apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px 12px; padding: 75px 20px 20px; flex-grow: 1; align-content: start; overflow-y: auto; transition: transform 0.4s, filter 0.4s; }
+  #desktop-apps::-webkit-scrollbar { display: none; }
+  .app-icon { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 12px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.6); cursor: pointer; user-select: none; }
+  .app-icon:active .icon-box { filter: brightness(0.7); }
+  .app-icon .icon-box { width: 62px; height: 62px; border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 34px; margin-bottom: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  
+  /* App 容器通用 */
+  .app-view { position: absolute; top: 100%; left: 0; width: 100%; height: 100%; background: #fff; transition: top 0.4s cubic-bezier(0.3, 0.9, 0.4, 1); display: flex; flex-direction: column; z-index: 100; border-radius: 40px; overflow: hidden; opacity: 0; }
+  @media (max-width: 450px) { .app-view { border-radius: 0; } }
+  .app-view.active { top: 0; opacity: 1; }
+  
+  .app-header { display: flex; align-items: center; justify-content: space-between; padding: 55px 15px 12px; font-size: 18px; font-weight: 600; flex-shrink: 0; position: relative; }
+  .app-header .title { position: absolute; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 1; }
+  .app-header .side-action { z-index: 2; width: var(--touch-size); display: flex; justify-content: center; cursor: pointer; }
+  
+  .scroll-content { flex-grow: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 90px; }
+  .scroll-content::-webkit-scrollbar { display: none; }
+  .app-tab-view { display: none; flex-direction: column; min-height: 100%; }
+  .app-tab-view.active { display: flex; }
+
+  /* 底部 Tab 通用 */
+  .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; height: 85px; display: flex; justify-content: space-around; padding-top: 8px; z-index: 10; padding-bottom: 25px; font-size: 10px; font-weight: 500; }
+  .bottom-nav div { display: flex; flex-direction: column; align-items: center; color: #8E8E93; cursor: pointer; width: 25%; transition: color 0.2s; }
+  .bottom-nav i { font-size: 24px; margin-bottom: 4px; }
+
+  /* ================= 微信 (WeChat) 样式 ================= */
+  .wc-theme { background: #EDEDED; }
+  .wc-theme .app-header { background: #EDEDED; border-bottom: 0.5px solid #d1d1d1; color: #111; }
+  .wc-theme .bottom-nav { background: #F7F7F7; border-top: 0.5px solid #d1d1d1; }
+  .wc-theme .bottom-nav .active { color: var(--wc-green); }
+  .wc-list-item { background: #fff; display: flex; align-items: center; padding: 12px 15px; cursor: pointer; position: relative; }
+  .wc-list-item:active { background: #f0f0f0; }
+  .wc-list-item::after { content: ''; position: absolute; bottom: 0; left: 75px; right: 0; height: 0.5px; background: #e5e5e5; }
+  .wc-avatar { width: 48px; height: 48px; border-radius: 6px; flex-shrink: 0; margin-right: 15px; }
+
+  /* ================= X (Twitter) 样式 ================= */
+  .x-theme { background: #000; color: #fff; }
+  .x-theme .app-header { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); border-bottom: 0.5px solid #333; }
+  .x-theme .bottom-nav { background: rgba(0,0,0,0.9); border-top: 0.5px solid #333; }
+  .x-theme .bottom-nav .active { color: var(--x-blue); }
+  .x-tweet { display: flex; padding: 15px; border-bottom: 0.5px solid #333; cursor: pointer; }
+  .x-avatar { width: 40px; height: 40px; border-radius: 50%; background: #333; margin-right: 12px; flex-shrink: 0; }
+  .x-actions { display: flex; justify-content: space-between; margin-top: 12px; color: #71767B; max-width: 80%; }
+  .x-action-btn { cursor: pointer; display: flex; align-items: center; gap: 5px; transition: color 0.2s; }
+  .x-action-btn.liked { color: #F91880; }
+
+  /* ================= YouTube 样式 ================= */
+  .yt-theme { background: #0F0F0F; color: #fff; }
+  .yt-theme .app-header { background: #0F0F0F; justify-content: flex-start; gap: 15px; }
+  .yt-theme .bottom-nav { background: #0F0F0F; border-top: 0.5px solid #222; }
+  .yt-theme .bottom-nav .active { color: var(--yt-red); }
+  .yt-video { margin-bottom: 20px; cursor: pointer; }
+  .yt-thumb { width: 100%; aspect-ratio: 16/9; background: #333; }
+  
+  /* Shorts */
+  .shorts-container { position: relative; width: 100%; height: 100%; background: #222; overflow: hidden; }
+  .shorts-actions { position: absolute; right: 15px; bottom: 30px; display: flex; flex-direction: column; gap: 20px; align-items: center; }
+  .shorts-btn { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .shorts-btn i { font-size: 28px; margin-bottom: 5px; transition: transform 0.2s, color 0.2s; }
+  .shorts-btn.liked i { color: var(--yt-red); transform: scale(1.1); }
+
+  /* ================= QQ 样式 ================= */
+  .qq-theme { background: #F2F2F7; }
+  .qq-theme .app-header { background: var(--qq-blue); color: #fff; border: none; }
+  .qq-theme .bottom-nav { background: #fff; border-top: 0.5px solid #eee; }
+  .qq-theme .bottom-nav .active { color: var(--qq-blue); }
+  .qq-badge { position: absolute; top: -5px; right: -5px; background: #FF3B30; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; border: 2px solid #fff; font-weight: bold; }
+  .qq-avatar { width: 50px; height: 50px; border-radius: 50%; background: #e0e0e0; margin-right: 15px; position: relative; }
+
+  /* ================= 小红书 样式 ================= */
+  .xhs-theme { background: #F5F5F5; }
+  .xhs-theme .app-header { background: #fff; border-bottom: none; }
+  .xhs-theme .bottom-nav { background: #fff; border-top: 0.5px solid #eee; }
+  .xhs-theme .bottom-nav .active { color: #333; }
+  .xhs-top-nav { display: flex; justify-content: center; gap: 20px; font-size: 16px; color: #999; flex-grow: 1; z-index: 10; }
+  .xhs-top-nav span.active { color: #333; font-weight: bold; position: relative; }
+  .xhs-top-nav span.active::after { content:''; position:absolute; bottom:-6px; left:25%; width:50%; height:3px; background:var(--xhs-red); border-radius:2px; }
+  .xhs-add-btn { background: var(--xhs-red); color: #fff !important; width: 45px; height: 32px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px !important; margin-top: -5px; }
+  
+  /* 双列瀑布流 */
+  .xhs-waterfall { column-count: 2; column-gap: 10px; padding: 10px; }
+  .xhs-card { break-inside: avoid; background: #fff; border-radius: 12px; margin-bottom: 10px; overflow: hidden; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+  /* ================= iOS 设置 样式 ================= */
+  .set-theme { background: var(--sys-gray); }
+  .set-theme .app-header { background: var(--sys-gray); }
+  .set-title-large { font-size: 32px; font-weight: 700; padding: 10px 20px; margin-bottom: 10px; }
+  .ios-group { background: #fff; border-radius: 12px; margin: 0 20px 20px; overflow: hidden; }
+  .ios-item { display: flex; align-items: center; padding: 0 15px; min-height: 44px; cursor: pointer; }
+  .ios-item:active { background: #e5e5ea; }
+  .ios-item-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; margin-right: 15px; flex-shrink: 0; }
+  .ios-item-content { flex-grow: 1; display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid #c6c6c8; }
+  .ios-item:last-child .ios-item-content { border-bottom: none; }
+  
+  /* iOS 开关 */
+  .ios-toggle { width: 50px; height: 30px; background: #e9e9ea; border-radius: 15px; position: relative; transition: 0.3s; cursor: pointer; }
+  .ios-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; background: #fff; border-radius: 50%; transition: 0.3s; box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+  .ios-toggle.on { background: var(--sys-green); }
+  .ios-toggle.on::after { transform: translateX(20px); }
+
+  /* Toast 提示 */
+  #sys-toast { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 14px; z-index: 10000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  #sys-toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="phone-case">
+<div id="screen">
+  
+  <div class="notch"></div>
+  <div class="status-bar" id="status-bar">
+    <span id="sb-time">09:41</span>
+    <span class="status-icons"><i class="fa-solid fa-signal"></i> <i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-full"></i></span>
+  </div>
+  <div class="home-indicator" onclick="closeAllApps()"></div>
+  <div id="sys-toast">提示</div>
+
+  <!-- iOS 桌面 -->
+  <div id="desktop-apps">
+    <div class="app-icon" onclick="openApp('wechat')"><div class="icon-box" style="background:var(--wc-green);"><i class="fa-brands fa-weixin"></i></div><span>微信</span></div>
+    <div class="app-icon" onclick="openApp('xapp')"><div class="icon-box" style="background:#000;"><i class="fa-brands fa-x-twitter"></i></div><span>X</span></div>
+    <div class="app-icon" onclick="openApp('youtube')"><div class="icon-box" style="background:var(--yt-red);"><i class="fa-brands fa-youtube"></i></div><span>YouTube</span></div>
+    <div class="app-icon" onclick="openApp('qq')"><div class="icon-box" style="background:var(--qq-blue);"><i class="fa-brands fa-qq"></i></div><span>QQ</span></div>
+    <div class="app-icon" onclick="openApp('xhs')"><div class="icon-box" style="background:var(--xhs-red);"><i class="fa-solid fa-book-open"></i></div><span>小红书</span></div>
+    <div class="app-icon" onclick="openApp('settings')"><div class="icon-box" style="background:#8E8E93;"><i class="fa-solid fa-gear"></i></div><span>设置</span></div>
+  </div>
+
+  <!-- ================= 1. 微信 (WeChat) ================= -->
+  <div id="wechat-view" class="app-view wc-theme">
+    <div class="app-header">
+      <div class="side-action"></div>
+      <div class="title" style="font-weight: 500;">微信(3)</div>
+      <div class="side-action"><i class="fa-solid fa-circle-plus"></i></div>
+    </div>
+    
+    <!-- 微信 (聊天列表) -->
+    <div id="wc-tab-chat" class="app-tab-view scroll-content active">
+      <div style="padding: 10px; background:#EDEDED;"><div style="background:#fff; text-align:center; padding:8px; border-radius:6px; color:#b2b2b2; font-size:14px;"><i class="fa-solid fa-magnifying-glass"></i> 搜索</div></div>
+      <div class="wc-list-item">
+        <div class="wc-avatar" style="background:url('https://picsum.photos/100/100?1') center/cover;"></div>
+        <div style="flex-grow: 1;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b style="font-size:16px;">文件传输助手</b><span style="color:#b2b2b2; font-size:12px;">早上 08:30</span></div><div style="color:#b2b2b2; font-size:14px;">[文件] design_v2.pdf</div></div>
+      </div>
+      <div class="wc-list-item">
+        <div class="wc-avatar" style="background:url('https://picsum.photos/100/100?2') center/cover;"></div>
+        <div style="flex-grow: 1;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b style="font-size:16px;">马老板</b><span style="color:#b2b2b2; font-size:12px;">昨天</span></div><div style="color:#b2b2b2; font-size:14px;">下周二开个会</div></div>
+      </div>
+      <div class="wc-list-item">
+        <div class="wc-avatar" style="background:var(--sys-blue); color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px;"><i class="fa-solid fa-users"></i></div>
+        <div style="flex-grow: 1;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b style="font-size:16px;">干饭小分队(4)</b><span style="color:#b2b2b2; font-size:12px;">昨天</span></div><div style="color:#b2b2b2; font-size:14px;">张三: 晚上吃什么？</div></div>
+      </div>
+    </div>
+
+    <!-- 通讯录 -->
+    <div id="wc-tab-contacts" class="app-tab-view scroll-content">
+      <div style="padding: 5px 15px; background:#EDEDED; color:#888; font-size:12px;">A</div>
+      <div class="wc-list-item"><div class="wc-avatar" style="background:#f2a900;"></div><b>Alice</b></div>
+      <div style="padding: 5px 15px; background:#EDEDED; color:#888; font-size:12px;">B</div>
+      <div class="wc-list-item"><div class="wc-avatar" style="background:#555;"></div><b>Bob 研发</b></div>
+    </div>
+
+    <!-- 发现 -->
+    <div id="wc-tab-discover" class="app-tab-view scroll-content">
+      <div class="wc-list-item" style="margin-top: 10px;" onclick="showToast('跳转至朋友圈')">
+        <i class="fa-solid fa-camera-retro" style="color:var(--wc-green); font-size:22px; width:30px;"></i><b style="flex-grow:1; font-weight:normal;">朋友圈</b>
+        <i class="fa-solid fa-chevron-right" style="color:#ccc; font-size:14px;"></i>
+      </div>
+      <div class="wc-list-item" style="margin-top: 10px;">
+        <i class="fa-solid fa-qrcode" style="color:var(--sys-blue); font-size:22px; width:30px;"></i><b style="flex-grow:1; font-weight:normal;">扫一扫</b>
+        <i class="fa-solid fa-chevron-right" style="color:#ccc; font-size:14px;"></i>
+      </div>
+      <div class="wc-list-item">
+        <i class="fa-solid fa-mobile-screen-button" style="color:var(--sys-blue); font-size:22px; width:30px;"></i><b style="flex-grow:1; font-weight:normal;">摇一摇</b>
+        <i class="fa-solid fa-chevron-right" style="color:#ccc; font-size:14px;"></i>
+      </div>
+    </div>
+
+    <!-- 我 -->
+    <div id="wc-tab-me" class="app-tab-view scroll-content">
+      <div class="wc-list-item" style="padding: 40px 20px 30px;">
+        <div class="wc-avatar" style="width:64px; height:64px; background:url('https://picsum.photos/100/100?3') center/cover;"></div>
+        <div style="flex-grow:1;"><b style="font-size:22px;">CyberUser</b><p style="color:#888; margin-top:5px; font-size:14px;">微信号: ai_cyber_2026</p></div>
+        <i class="fa-solid fa-qrcode" style="color:#ccc; font-size:20px; margin-right:10px;"></i>
+      </div>
+      <div class="wc-list-item" style="margin-top: 10px;">
+        <i class="fa-solid fa-image" style="color:var(--sys-blue); font-size:22px; width:30px;"></i><b style="flex-grow:1; font-weight:normal;">相册</b>
+      </div>
+      <div class="wc-list-item">
+        <i class="fa-solid fa-cube" style="color:#f2a900; font-size:22px; width:30px;"></i><b style="flex-grow:1; font-weight:normal;">收藏</b>
+      </div>
+      <div class="wc-list-item" style="margin-top: 10px;">
+        <i class="fa-solid fa-gear" style="color:var(--sys-blue); font-size:22px; width:30px;"></i><b style="flex-grow:1; font-weight:normal;">设置</b>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="active" onclick="switchTab('wechat', 'chat', this)"><i class="fa-solid fa-comment"></i>微信</div>
+      <div onclick="switchTab('wechat', 'contacts', this)"><i class="fa-regular fa-address-book"></i>通讯录</div>
+      <div onclick="switchTab('wechat', 'discover', this)"><i class="fa-regular fa-compass"></i>发现</div>
+      <div onclick="switchTab('wechat', 'me', this)"><i class="fa-regular fa-user"></i>我</div>
+    </div>
+  </div>
+
+  <!-- ================= 2. X (Twitter) ================= -->
+  <div id="xapp-view" class="app-view x-theme">
+    <div class="app-header">
+      <div class="side-action"><div class="x-avatar" style="width:32px; height:32px; margin:0; background:url('https://picsum.photos/100/100?4')"></div></div>
+      <div class="title" style="font-size:22px;"><i class="fa-brands fa-x-twitter"></i></div>
+      <div class="side-action" style="width:auto; font-size:14px; background:var(--x-blue); color:#fff; padding:6px 14px; border-radius:20px; cursor:pointer;" onclick="showToast('打开发推编辑器')">发推</div>
+    </div>
+
+    <div id="xapp-tab-home" class="app-tab-view scroll-content active">
+      <!-- 帖子 1 -->
+      <div class="x-tweet" onclick="showToast('查看推文详情')">
+        <div class="x-avatar" style="background:url('https://picsum.photos/100/100?5') center/cover;"></div>
+        <div style="flex-grow: 1;">
+          <div><b style="color:#fff;">Tech Daily</b> <span style="color:#71767B;">@techdaily · 2h</span></div>
+          <div style="margin-top:5px; font-size:15px; line-height:1.4;">AI 正在改变我们交互的方式。这是未来的全新 UI 设计趋势！🚀 #UIUX #AI</div>
+          <div class="x-actions" onclick="event.stopPropagation()">
+            <div class="x-action-btn"><i class="fa-regular fa-comment"></i> 12</div>
+            <div class="x-action-btn"><i class="fa-solid fa-retweet"></i> 45</div>
+            <div class="x-action-btn" onclick="toggleXLike(this)"><i class="fa-regular fa-heart"></i> <span>1.2k</span></div>
+            <div class="x-action-btn"><i class="fa-solid fa-chart-simple"></i> 3k</div>
+          </div>
+        </div>
+      </div>
+      <!-- 帖子 2 -->
+      <div class="x-tweet" onclick="showToast('查看推文详情')">
+        <div class="x-avatar" style="background:url('https://picsum.photos/100/100?6') center/cover;"></div>
+        <div style="flex-grow: 1;">
+          <div><b style="color:#fff;">Design Hub</b> <span style="color:#71767B;">@designhub · 5h</span></div>
+          <div style="margin-top:5px; font-size:15px; line-height:1.4;">极简主义永远不会过时。黑白灰的搭配才是最高级的。🖤🤍</div>
+          <div class="x-actions" onclick="event.stopPropagation()">
+            <div class="x-action-btn"><i class="fa-regular fa-comment"></i> 8</div>
+            <div class="x-action-btn"><i class="fa-solid fa-retweet"></i> 12</div>
+            <div class="x-action-btn" onclick="toggleXLike(this)"><i class="fa-regular fa-heart"></i> <span>450</span></div>
+            <div class="x-action-btn"><i class="fa-solid fa-chart-simple"></i> 1.5k</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="xapp-tab-search" class="app-tab-view scroll-content">
+      <div style="padding: 15px;"><input type="text" placeholder="搜索 X" style="width:100%; padding:10px 15px; background:#202327; border:none; border-radius:20px; color:#fff; outline:none;"></div>
+      <h3 style="padding: 0 15px; margin: 10px 0;">流行趋势</h3>
+      <div style="padding: 15px; border-bottom:1px solid #333;"><div style="color:#71767B; font-size:13px;">科技 · 流行</div><b style="font-size:16px;">#Web3</b><div style="color:#71767B; font-size:13px; margin-top:5px;">50.4K 帖子</div></div>
+      <div style="padding: 15px; border-bottom:1px solid #333;"><div style="color:#71767B; font-size:13px;">娱乐 · 流行</div><b style="font-size:16px;">#Cyberpunk</b><div style="color:#71767B; font-size:13px; margin-top:5px;">12.1K 帖子</div></div>
+    </div>
+    
+    <div id="xapp-tab-notif" class="app-tab-view scroll-content">
+      <div style="padding:15px; border-bottom:1px solid #333; display:flex; gap:10px;"><i class="fa-solid fa-heart" style="color:#F91880; font-size:24px;"></i><div><b>Design Hub</b> 喜欢了你的回复</div></div>
+      <div style="padding:15px; border-bottom:1px solid #333; display:flex; gap:10px;"><i class="fa-solid fa-user" style="color:var(--x-blue); font-size:24px;"></i><div><b>Tech Daily</b> 关注了你</div></div>
+    </div>
+    
+    <div id="xapp-tab-msg" class="app-tab-view scroll-content">
+      <div class="x-tweet">
+        <div class="x-avatar" style="background:url('https://picsum.photos/100/100?6') center/cover;"></div>
+        <div><b style="color:#fff;">Design Hub</b> <span style="color:#71767B;">@designhub · 11月1日</span><div style="margin-top:5px; color:#71767B;">哈喽！想合作一个设计项目...</div></div>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="active" onclick="switchTab('xapp', 'home', this)"><i class="fa-solid fa-house"></i></div>
+      <div onclick="switchTab('xapp', 'search', this)"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div onclick="switchTab('xapp', 'notif', this)"><i class="fa-regular fa-bell"></i></div>
+      <div onclick="switchTab('xapp', 'msg', this)"><i class="fa-regular fa-envelope"></i></div>
+    </div>
+  </div>
+
+  <!-- ================= 3. YouTube ================= -->
+  <div id="youtube-view" class="app-view yt-theme">
+    <div class="app-header">
+      <i class="fa-brands fa-youtube" style="color:var(--yt-red); font-size:28px;"></i>
+      <span style="font-weight:700; font-size:20px; letter-spacing:-1px; flex-grow:1;">YouTube</span>
+      <i class="fa-solid fa-display" style="font-size:20px;"></i>
+      <i class="fa-regular fa-bell" style="font-size:20px; margin-left:15px;"></i>
+      <div style="width:28px; height:28px; border-radius:50%; background:url('https://picsum.photos/100/100?7'); margin-left:15px;"></div>
+    </div>
+
+    <div id="youtube-tab-home" class="app-tab-view scroll-content active">
+      <div class="yt-video" onclick="showToast('正在播放...')">
+        <div class="yt-thumb" style="background:url('https://picsum.photos/400/225?8') center/cover;"></div>
+        <div style="display:flex; padding:12px 15px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:url('https://picsum.photos/100/100?8'); margin-right:12px; flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:15px; font-weight:500; margin-bottom:5px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">2026年终极智能家居搭建指南 | 沉浸式体验</div>
+            <div style="color:#aaa; font-size:13px;">Tech Space · 12万次观看 · 2天前</div>
+          </div>
+        </div>
+      </div>
+      <div class="yt-video" onclick="showToast('正在播放...')">
+        <div class="yt-thumb" style="background:url('https://picsum.photos/400/225?9') center/cover;"></div>
+        <div style="display:flex; padding:12px 15px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:url('https://picsum.photos/100/100?9'); margin-right:12px; flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:15px; font-weight:500; margin-bottom:5px; line-height:1.3;">4K HDR 治愈系风景 - 瑞士雪山</div>
+            <div style="color:#aaa; font-size:13px;">Relax Nature · 250万次观看 · 1周前</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="youtube-tab-shorts" class="app-tab-view" style="flex-grow:1; padding-bottom:85px;">
+      <div class="shorts-container" style="background:url('https://picsum.photos/400/700?10') center/cover;">
+        <div style="position:absolute; bottom:30px; left:15px; width:65%; z-index:2;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <div style="width:36px; height:36px; border-radius:50%; background:url('https://picsum.photos/100/100?11');"></div>
+            <b style="font-size:15px;">Meme King</b> <span style="background:var(--yt-red); padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;">订阅</span>
+          </div>
+          <div style="font-size:14px; text-shadow:1px 1px 2px rgba(0,0,0,0.8);">猫咪的迷惑行为大赏 😂 #cat #funny</div>
+        </div>
+        <div class="shorts-actions" style="z-index:2;">
+          <div class="shorts-btn" onclick="toggleYtLike(this)"><i class="fa-solid fa-thumbs-up"></i><span>1.2万</span></div>
+          <div class="shorts-btn"><i class="fa-solid fa-thumbs-down"></i><span>不推荐</span></div>
+          <div class="shorts-btn"><i class="fa-solid fa-comment-dots"></i><span>456</span></div>
+          <div class="shorts-btn"><i class="fa-solid fa-share"></i><span>分享</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 占位页 -->
+    <div id="youtube-tab-subs" class="app-tab-view scroll-content"><div style="padding:50px; text-align:center; color:#888;">订阅内容</div></div>
+    <div id="youtube-tab-notif" class="app-tab-view scroll-content"><div style="padding:50px; text-align:center; color:#888;">暂无新通知</div></div>
+    <div id="youtube-tab-lib" class="app-tab-view scroll-content"><div style="padding:50px; text-align:center; color:#888;">媒体库</div></div>
+
+    <div class="bottom-nav">
+      <div class="active" onclick="switchTab('youtube', 'home', this)"><i class="fa-solid fa-house"></i>首页</div>
+      <div onclick="switchTab('youtube', 'shorts', this)"><i class="fa-solid fa-bolt"></i>Shorts</div>
+      <div onclick="switchTab('youtube', 'subs', this)"><i class="fa-brands fa-youtube"></i>订阅</div>
+      <div onclick="switchTab('youtube', 'notif', this)"><i class="fa-regular fa-bell"></i>通知</div>
+      <div onclick="switchTab('youtube', 'lib', this)"><i class="fa-solid fa-folder-open"></i>媒体库</div>
+    </div>
+  </div>
+
+  <!-- ================= 4. QQ ================= -->
+  <div id="qq-view" class="app-view qq-theme">
+    <div class="app-header">
+      <div class="side-action"><div style="width:32px; height:32px; border-radius:50%; background:url('https://picsum.photos/100/100?12')"></div></div>
+      <div class="title" style="display:flex; flex-direction:column; align-items:center; line-height:1.2;">
+        <span style="font-size:18px;">QQ</span>
+        <span style="font-size:10px; font-weight:normal; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:10px;"><span style="color:#00FF00; margin-right:3px;">●</span>手机在线 - WiFi</span>
+      </div>
+      <div class="side-action"><i class="fa-solid fa-plus" style="font-size:22px;"></i></div>
+    </div>
+
+    <div id="qq-tab-msg" class="app-tab-view scroll-content active">
+      <div style="padding:10px; background:#fff;"><input type="text" placeholder="搜索" style="width:100%; padding:8px; background:#F2F2F7; border:none; border-radius:6px; text-align:center; outline:none;"></div>
+      
+      <div class="wc-list-item" onclick="showToast('进入聊天')">
+        <div class="qq-avatar" style="background:#FFA000; color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px;">L<div class="qq-badge" onclick="clearBadge(event, this)">3</div></div>
+        <div style="flex-grow:1;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>李四</b><span style="color:#888; font-size:12px;">10:30</span></div><div style="color:#888; font-size:14px;">发个压缩包给我呗</div></div>
+      </div>
+      
+      <div class="wc-list-item" onclick="showToast('进入聊天')">
+        <div class="qq-avatar" style="background:#E91E63; color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px;">王<div class="qq-badge" onclick="clearBadge(event, this)">99+</div></div>
+        <div style="flex-grow:1;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>王者荣耀开黑群</b><span style="color:#888; font-size:12px;">昨天</span></div><div style="color:#888; font-size:14px;">[有人@我] 晚上来排位？</div></div>
+      </div>
+      
+      <div class="wc-list-item" onclick="showToast('进入聊天')">
+        <div class="qq-avatar" style="background:#4CAF50; color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px;">Z</div>
+        <div style="flex-grow:1;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>张三</b><span style="color:#888; font-size:12px;">星期一</span></div><div style="color:#888; font-size:14px;">好的，没问题。</div></div>
+      </div>
+    </div>
+
+    <div id="qq-tab-contacts" class="app-tab-view scroll-content">
+      <div style="padding: 10px 15px; color:#888; font-size:12px;">特别关心</div>
+      <div class="wc-list-item"><div class="qq-avatar" style="background:url('https://picsum.photos/100/100?13') center/cover; width:40px; height:40px;"></div><b>老妈</b></div>
+      <div style="padding: 10px 15px; color:#888; font-size:12px;">A</div>
+      <div class="wc-list-item"><div class="qq-avatar" style="background:#00BCD4; color:#fff; display:flex; align-items:center; justify-content:center; width:40px; height:40px;">A</div><b>Alan</b></div>
+    </div>
+    
+    <div id="qq-tab-zone" class="app-tab-view scroll-content"><div style="padding:50px; text-align:center; color:#888;">好友动态 (QQ空间)</div></div>
+
+    <div class="bottom-nav">
+      <div class="active" onclick="switchTab('qq', 'msg', this)"><i class="fa-solid fa-message"></i>消息</div>
+      <div onclick="switchTab('qq', 'contacts', this)"><i class="fa-solid fa-user-group"></i>联系人</div>
+      <div onclick="switchTab('qq', 'zone', this)"><i class="fa-solid fa-star"></i>动态</div>
+    </div>
+  </div>
+
+  <!-- ================= 5. 小红书 (Xiaohongshu) ================= -->
+  <div id="xhs-view" class="app-view xhs-theme">
+    <div class="app-header">
+      <div class="side-action"><i class="fa-solid fa-bars"></i></div>
+      <div class="xhs-top-nav">
+        <span>关注</span><span class="active">发现</span><span>附近</span>
+      </div>
+      <div class="side-action"><i class="fa-solid fa-magnifying-glass"></i></div>
+    </div>
+
+    <div id="xhs-tab-home" class="app-tab-view scroll-content active">
+      <div class="xhs-waterfall" id="xhs-masonry-container">
+        <!-- JS 动态生成瀑布流卡片 -->
+      </div>
+    </div>
+    
+    <div id="xhs-tab-shop" class="app-tab-view scroll-content"><div style="padding:50px; text-align:center; color:#888;">购物专区</div></div>
+    <div id="xhs-tab-msg" class="app-tab-view scroll-content"><div style="padding:50px; text-align:center; color:#888;">消息通知</div></div>
+    <div id="xhs-tab-me" class="app-tab-view scroll-content"><div style="padding:50px; text-align:center; color:#888;">个人中心</div></div>
+
+    <div class="bottom-nav">
+      <div class="active" onclick="switchTab('xhs', 'home', this)"><i class="fa-solid fa-house" style="font-size:20px;"></i>首页</div>
+      <div onclick="switchTab('xhs', 'shop', this)"><i class="fa-solid fa-bag-shopping" style="font-size:20px;"></i>购物</div>
+      <div onclick="showToast('打开发布器')"><div class="xhs-add-btn"><i class="fa-solid fa-plus"></i></div></div>
+      <div onclick="switchTab('xhs', 'msg', this)"><i class="fa-solid fa-comment-dots" style="font-size:20px;"></i>消息</div>
+      <div onclick="switchTab('xhs', 'me', this)"><i class="fa-regular fa-user" style="font-size:20px;"></i>我</div>
+    </div>
+  </div>
+
+  <!-- ================= 6. iOS 设置 ================= -->
+  <div id="settings-view" class="app-view set-theme">
+    <div class="app-header">
+      <div class="side-action" style="color:var(--sys-blue);" onclick="closeApp('settings-view')"><i class="fa-solid fa-chevron-left"></i></div>
+      <div class="title">设置</div>
+      <div class="side-action"></div>
+    </div>
+    <div class="scroll-content" style="padding-bottom: 20px;">
+      <div class="set-title-large">设置</div>
+      <div style="margin: 0 20px 20px;"><input type="text" placeholder="搜索" style="width:100%; padding:10px 15px; background:#e3e3e8; border:none; border-radius:10px; font-size:16px; outline:none;"></div>
+      
+      <!-- 个人账号卡片 -->
+      <div class="ios-group" style="padding:15px; display:flex; align-items:center;" onclick="showToast('Apple ID 设置')">
+        <div style="width:60px; height:60px; border-radius:50%; background:url('https://picsum.photos/100/100?15') center/cover; margin-right:15px;"></div>
+        <div style="flex-grow:1;"><b style="font-size:20px;">CyberUser</b><div style="font-size:13px; color:#333; margin-top:3px;">Apple ID、iCloud+、媒体与购买项目</div></div>
+        <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i>
+      </div>
+
+      <!-- 第一组：网络 -->
+      <div class="ios-group">
+        <div class="ios-item" onclick="toggleIosSwitch(this)">
+          <div class="ios-item-icon" style="background:#FF9500;"><i class="fa-solid fa-plane"></i></div>
+          <div class="ios-item-content">飞行模式 <div class="ios-toggle"></div></div>
+        </div>
+        <div class="ios-item" onclick="showToast('Wi-Fi 列表')">
+          <div class="ios-item-icon" style="background:#007AFF;"><i class="fa-solid fa-wifi"></i></div>
+          <div class="ios-item-content">Wi-Fi <div style="color:#8e8e93; font-size:15px;">CyberNet_5G <i class="fa-solid fa-chevron-right" style="margin-left:5px;"></i></div></div>
+        </div>
+        <div class="ios-item" onclick="showToast('蓝牙设置')">
+          <div class="ios-item-icon" style="background:#007AFF;"><i class="fa-brands fa-bluetooth-b"></i></div>
+          <div class="ios-item-content">蓝牙 <div style="color:#8e8e93; font-size:15px;">开启 <i class="fa-solid fa-chevron-right" style="margin-left:5px;"></i></div></div>
+        </div>
+        <div class="ios-item" onclick="showToast('蜂窝网络')">
+          <div class="ios-item-icon" style="background:#34C759;"><i class="fa-solid fa-signal"></i></div>
+          <div class="ios-item-content">蜂窝网络 <div style="color:#8e8e93; font-size:15px;">中国联通 <i class="fa-solid fa-chevron-right" style="margin-left:5px;"></i></div></div>
+        </div>
+      </div>
+
+      <!-- 第二组：通知与声音 -->
+      <div class="ios-group">
+        <div class="ios-item" onclick="showToast('通知设置')">
+          <div class="ios-item-icon" style="background:#FF3B30;"><i class="fa-solid fa-bell"></i></div>
+          <div class="ios-item-content">通知 <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i></div>
+        </div>
+        <div class="ios-item" onclick="showToast('声音设置')">
+          <div class="ios-item-icon" style="background:#FF3B30;"><i class="fa-solid fa-volume-high"></i></div>
+          <div class="ios-item-content">声音与触感 <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i></div>
+        </div>
+        <div class="ios-item" onclick="showToast('专注模式')">
+          <div class="ios-item-icon" style="background:#5856D6;"><i class="fa-solid fa-moon"></i></div>
+          <div class="ios-item-content">专注模式 <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i></div>
+        </div>
+        <div class="ios-item" onclick="showToast('屏幕使用时间')">
+          <div class="ios-item-icon" style="background:#5856D6;"><i class="fa-solid fa-hourglass-half"></i></div>
+          <div class="ios-item-content">屏幕使用时间 <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i></div>
+        </div>
+      </div>
+
+      <!-- 第三组：通用 -->
+      <div class="ios-group">
+        <div class="ios-item" onclick="showToast('通用设置')">
+          <div class="ios-item-icon" style="background:#8E8E93;"><i class="fa-solid fa-gear"></i></div>
+          <div class="ios-item-content">通用 <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i></div>
+        </div>
+        <div class="ios-item" onclick="showToast('控制中心')">
+          <div class="ios-item-icon" style="background:#8E8E93;"><i class="fa-solid fa-sliders"></i></div>
+          <div class="ios-item-content">控制中心 <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i></div>
+        </div>
+        <div class="ios-item" onclick="showToast('显示设置')">
+          <div class="ios-item-icon" style="background:#007AFF;"><i class="fa-solid fa-text-width"></i></div>
+          <div class="ios-item-content">显示与亮度 <i class="fa-solid fa-chevron-right" style="color:#c7c7cc; font-size:14px;"></i></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // 时钟更新
+  setInterval(() => {
+    const d = new Date();
+    document.getElementById('sb-time').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }, 1000);
+
+  // App 开启/关闭
+  let activeAppId = null;
+  function openApp(appId) {
+    activeAppId = appId;
+    document.getElementById('desktop-apps').style.transform = 'scale(0.92)';
+    document.getElementById('desktop-apps').style.filter = 'blur(10px)';
+    document.getElementById(`${appId}-view`).classList.add('active');
+    
+    // 状态栏颜色自适应
+    const sb = document.getElementById('status-bar');
+    if(appId === 'wechat' || appId === 'qq' || appId === 'xhs' || appId === 'settings') {
+      sb.style.color = '#000';
+    } else {
+      sb.style.color = '#fff';
+    }
+  }
+
+  function closeAllApps() {
+    document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+    document.getElementById('desktop-apps').style.transform = 'scale(1)';
+    document.getElementById('desktop-apps').style.filter = 'none';
+    document.getElementById('status-bar').style.color = '#fff';
+    activeAppId = null;
+  }
+  
+  function closeApp(appId) {
+    closeAllApps();
+  }
+
+  // 底部 Tab 切换
+  function switchTab(app, tab, el) {
+    document.querySelectorAll(`#${app}-view .app-tab-view`).forEach(v => v.classList.remove('active'));
+    document.querySelectorAll(`#${app}-view .bottom-nav div`).forEach(d => d.classList.remove('active'));
+    document.getElementById(`${app}-tab-${tab}`).classList.add('active');
+    if(el) el.classList.add('active');
+  }
+
+  // Toast 提示
+  function showToast(msg) {
+    const t = document.getElementById('sys-toast');
+    t.innerText = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1500);
+  }
+
+  // X (Twitter) 点赞交互
+  function toggleXLike(el) {
+    event.stopPropagation();
+    const icon = el.querySelector('i');
+    const span = el.querySelector('span');
+    el.classList.toggle('liked');
+    if(el.classList.contains('liked')) {
+      icon.className = 'fa-solid fa-heart';
+      span.innerText = '1.2k (已赞)';
+    } else {
+      icon.className = 'fa-regular fa-heart';
+      span.innerText = '1.2k';
+    }
+  }
+
+  // YouTube Shorts 点赞交互
+  function toggleYtLike(el) {
+    el.classList.toggle('liked');
+    const span = el.querySelector('span');
+    if(el.classList.contains('liked')) span.innerText = '1.2万+';
+    else span.innerText = '1.2万';
+  }
+
+  // QQ 红点消除
+  function clearBadge(e, el) {
+    e.stopPropagation();
+    el.style.display = 'none';
+  }
+
+  // iOS 开关交互
+  function toggleIosSwitch(el) {
+    const toggle = el.querySelector('.ios-toggle');
+    if(toggle) toggle.classList.toggle('on');
+  }
+
+  // 小红书 瀑布流数据生成
+  function generateXhsMasonry() {
+    const container = document.getElementById('xhs-masonry-container');
+    const titles = ["周末探店推荐！超好拍📸", "OOTD | 极简高级感穿搭", "这个键盘颜值太绝了...", "减脂期必看！懒人食谱🥗", "新家软装分享🛋️", "治愈系风景，太美啦", "日常爱用物合集✨", "教你调出冷白皮色调"];
+    let html = '';
+    for(let i = 0; i < 8; i++) {
+      // 随机生成卡片高度模拟瀑布流
+      const imgHeight = Math.floor(Math.random() * 100 + 150); 
+      html += `
+        <div class="xhs-card" onclick="showToast('进入笔记详情')">
+          <div style="width:100%; height:${imgHeight}px; background:linear-gradient(${Math.random()*360}deg, #FFB6C1, #FFC0CB); background-image:url('https://picsum.photos/300/${imgHeight}?${i}'); background-size:cover;"></div>
+          <div style="padding:10px;">
+            <div style="font-size:14px; font-weight:bold; color:#333; margin-bottom:8px; line-height:1.4;">${titles[i]}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:5px;">
+                <div style="width:20px; height:20px; border-radius:50%; background:#ccc;"></div>
+                <span style="font-size:12px; color:#888;">用户_${i}</span>
+              </div>
+              <div style="font-size:12px; color:#888;"><i class="fa-regular fa-heart"></i> ${Math.floor(Math.random()*500+10)}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+    container.innerHTML = html;
+  }
+  
+  // 初始化生成小红书数据
+  generateXhsMasonry();
+
+</script>
+</body>
+</html>
