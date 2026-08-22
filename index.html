@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI 拟真全生态手机 iOS Pro Max</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style id="custom-css"></style>
+<style>
+  :root {
+    --bg-image: url('https://picsum.photos/800/1600?random=bg');
+    --sys-blue: #007AFF; --sys-green: #34C759; --sys-red: #FF3B30; --sys-gray: #F2F2F7;
+    --touch-size: 44px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; background: #000; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, sans-serif; height: 100vh; overflow: hidden; }
+  
+  /* 手机物理外壳与屏幕 */
+  #phone-case { width: 100vw; height: 100vh; max-width: 430px; max-height: 932px; background: #000; border-radius: 50px; padding: 12px; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 0 20px rgba(0,0,0,0.8); position: relative; }
+  @media (max-width: 450px) { #phone-case { border-radius: 0; padding: 0; box-shadow: none; max-height: 100vh; } }
+
+  #screen { width: 100%; height: 100%; border-radius: 40px; overflow: hidden; position: relative; background: var(--bg-image) center/cover; display: flex; flex-direction: column; }
+  @media (max-width: 450px) { #screen { border-radius: 0; } }
+
+  /* 灵动岛 & 状态栏 */
+  .status-bar { height: 44px; width: 100%; position: absolute; top: 0; z-index: 9999; display: flex; justify-content: space-between; padding: 0 30px; align-items: center; color: #fff; font-size: 15px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.5); pointer-events: none; }
+  .notch { width: 125px; height: 35px; background: #000; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); border-radius: 20px; z-index: 10000; box-shadow: inset 0 0 5px rgba(255,255,255,0.1); }
+  .home-indicator { width: 35%; height: 5px; background: #fff; border-radius: 10px; position: absolute; bottom: 8px; left: 32.5%; z-index: 10000; mix-blend-mode: difference; cursor: pointer; }
+
+  /* iOS 桌面网格 */
+  #desktop-apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px 15px; padding: 70px 20px 20px; flex-grow: 1; align-content: start; overflow-y: auto; }
+  #desktop-apps::-webkit-scrollbar { display: none; }
+  
+  .app-icon { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 12px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.6); cursor: pointer; }
+  .app-icon .icon-box { width: 62px; height: 62px; border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 34px; margin-bottom: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); background-size: cover !important; background-position: center !important; }
+  
+  /* iOS 拟真 Dock 栏 */
+  #dock { background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); margin: 10px 15px 25px; border-radius: 32px; padding: 15px 12px; display: flex; justify-content: space-around; }
+  #dock .app-icon span { display: none; } /* Dock栏不显示文字 */
+  #dock .app-icon .icon-box { margin-bottom: 0; }
+
+  /* App 全屏窗口 */
+  .app-view { position: absolute; top: 100%; left: 0; width: 100%; height: 100%; background: #fff; transition: top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); display: flex; flex-direction: column; z-index: 100; border-radius: 40px; overflow: hidden; }
+  @media (max-width: 450px) { .app-view { border-radius: 0; } }
+  .app-view.active { top: 0; }
+  
+  /* App 顶部导航 */
+  .app-header { background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); padding: 55px 15px 12px; display: flex; align-items: center; justify-content: space-between; font-size: 18px; font-weight: 600; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 10; }
+  .app-header .back-btn { font-size: 20px; color: var(--sys-blue); cursor: pointer; width: var(--touch-size); height: var(--touch-size); display: flex; align-items: center; }
+  .app-header .title { position: absolute; left: 50%; transform: translateX(-50%); width: 50%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  
+  .scroll-content { flex-grow: 1; overflow-y: auto; background: var(--sys-gray); padding-bottom: 90px; }
+  .app-sub-view { display: none; flex-direction: column; height: 100%; }
+  .app-sub-view.active { display: flex; }
+
+  /* 底部 Tab 栏 */
+  .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; height: 85px; background: rgba(255,255,255,0.9); backdrop-filter: blur(15px); border-top: 0.5px solid rgba(0,0,0,0.1); display: flex; justify-content: space-around; padding-top: 8px; z-index: 10; padding-bottom: 25px; }
+  .bottom-nav div { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #8E8E93; cursor: pointer; width: 25%; font-weight: 500; }
+  .bottom-nav div.active { color: var(--sys-blue); }
+  .bottom-nav i { font-size: 22px; margin-bottom: 4px; }
+
+  /* 通用 UI 组件 */
+  .btn-primary { background: var(--sys-blue); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .btn-sm { padding: 6px 14px; font-size: 14px; border-radius: 16px; }
+  .list-item { background: #fff; padding: 15px; border-bottom: 0.5px solid #eee; display: flex; align-items: center; cursor: pointer; }
+  .textarea-box { width: 100%; border: none; padding: 15px; border-radius: 12px; background: #f9f9f9; resize: none; font-size: 15px; margin-bottom: 10px; font-family: inherit;}
+  
+  /* 电商流 (支持居中按钮与网格) */
+  .feed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; position: relative; min-height: 100%; }
+  .product-card { background: #fff; border-radius: 12px; overflow: hidden; padding-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .product-img { width: 100%; height: 160px; object-fit: cover; background: #eee; }
+  
+  /* 中心加载按钮 */
+  .center-refresh-btn { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 180px; text-align: center; z-index: 5; box-shadow: 0 10px 20px rgba(0,0,0,0.15); transition: all 0.4s; }
+  .center-refresh-btn.moved { position: relative; top: auto; left: auto; transform: none; grid-column: 1 / -1; margin: 20px auto; width: 200px; }
+
+  /* Tinder 卡片 */
+  #tinder-card { width: 90%; height: 60%; background: #fff; border-radius: 20px; margin: 20px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  
+  /* 弹窗 */
+  .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+  .modal-content { background: white; width: 85%; max-height: 80vh; overflow-y: auto; padding: 25px; border-radius: 20px; }
+  .modal input, .modal textarea { width: 100%; margin: 10px 0; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
+  .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div id="phone-case">
+<div id="screen">
+  
+  <div class="notch"></div>
+  <div class="status-bar"><span id="sb-time">00:00</span><span><i class="fa-solid fa-signal"></i> <i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-full"></i></span></div>
+  <div class="home-indicator" onclick="closeAllApps()"></div>
+
+  <!-- iOS 桌面 -->
+  <div id="desktop-apps">
+    <div class="app-icon" onclick="openApp('wechat')" oncontextmenu="customIcon(event,'微信')"><div class="icon-box" id="ic-微信" style="background:#07C160;"><i class="fa-brands fa-weixin"></i></div><span>微信</span></div>
+    <div class="app-icon" onclick="openApp('qq')" oncontextmenu="customIcon(event,'QQ')"><div class="icon-box" id="ic-QQ" style="background:#12B7F5;"><i class="fa-brands fa-qq"></i></div><span>QQ</span></div>
+    <div class="app-icon" onclick="openApp('xhs')" oncontextmenu="customIcon(event,'小红书')"><div class="icon-box" id="ic-小红书" style="background:#FF2442;"><i class="fa-solid fa-book-open"></i></div><span>小红书</span></div>
+    <div class="app-icon" onclick="openApp('bili')" oncontextmenu="customIcon(event,'B站')"><div class="icon-box" id="ic-B站" style="background:#FB7299;"><i class="fa-brands fa-bilibili"></i></div><span>哔哩哔哩</span></div>
+    <div class="app-icon" onclick="openApp('pdd')" oncontextmenu="customIcon(event,'拼多多')"><div class="icon-box" id="ic-拼多多" style="background:#E02E24;"><i class="fa-solid fa-tags"></i></div><span>拼多多</span></div>
+    <div class="app-icon" onclick="openApp('meituan')" oncontextmenu="customIcon(event,'美团')"><div class="icon-box" id="ic-美团" style="background:#FFC300; color:#000;"><i class="fa-solid fa-motorcycle"></i></div><span>美团</span></div>
+    <div class="app-icon" onclick="openApp('x')" oncontextmenu="customIcon(event,'X')"><div class="icon-box" id="ic-X" style="background:#000;"><i class="fa-brands fa-x-twitter"></i></div><span>X</span></div>
+    <div class="app-icon" onclick="openApp('yt')" oncontextmenu="customIcon(event,'YouTube')"><div class="icon-box" id="ic-YouTube" style="background:#FF0000;"><i class="fa-brands fa-youtube"></i></div><span>YouTube</span></div>
+    <div class="app-icon" onclick="openApp('tinder')" oncontextmenu="customIcon(event,'Tinder')"><div class="icon-box" id="ic-Tinder" style="background:linear-gradient(45deg,#fd297b,#ff655b);"><i class="fa-solid fa-fire"></i></div><span>Tinder</span></div>
+    <div class="app-icon" onclick="openApp('xianyu')" oncontextmenu="customIcon(event,'闲鱼')"><div class="icon-box" id="ic-闲鱼" style="background:#FFDA00; color:#000;"><i class="fa-solid fa-fish"></i></div><span>闲鱼</span></div>
+    <div class="app-icon" onclick="openModal('presetModal')"><div class="icon-box" style="background:#333;"><i class="fa-solid fa-robot"></i></div><span>世界书</span></div>
+    <div class="app-icon" onclick="openModal('settingsModal')"><div class="icon-box" style="background:#555;"><i class="fa-solid fa-user"></i></div><span>面具设定</span></div>
+  </div>
+
+  <!-- iOS Dock (固定4个) -->
+  <div id="dock">
+    <div class="app-icon" onclick="openApp('wechat')"><div class="icon-box" style="background:#07C160;"><i class="fa-brands fa-weixin"></i></div><span></span></div>
+    <div class="app-icon" onclick="openApp('pdd')"><div class="icon-box" style="background:#E02E24;"><i class="fa-solid fa-cart-shopping"></i></div><span></span></div>
+    <div class="app-icon" onclick="openApp('tinder')"><div class="icon-box" style="background:linear-gradient(45deg,#fd297b,#ff655b);"><i class="fa-solid fa-fire"></i></div><span></span></div>
+    <div class="app-icon" onclick="openApp('xianyu')"><div class="icon-box" style="background:#FFDA00; color:#000;"><i class="fa-solid fa-fish"></i></div><span></span></div>
+  </div>
+
+  <!-- ================= 模板：通用社交/媒体 App (B站/XHS/X/YouTube/QQ) ================= -->
+  <!-- 用 JS 动态渲染视图以节省代码量，见下方 script -->
+  <div id="dynamic-app-container"></div>
+
+  <!-- ================= 微信 ================= -->
+  <div id="wechat-view" class="app-view">
+    <div class="app-header" style="background:#f7f7f7">
+      <div class="back-btn"></div><div class="title" id="wc-title">微信</div>
+      <div class="actions"><i class="fa-solid fa-plus" style="font-size:20px; margin-right:15px; color:#111" onclick="openModal('addContactModal')"></i></div>
+    </div>
+    <div id="wc-tab-chats" class="app-sub-view active scroll-content"><div id="contact-list-container"></div></div>
+    <div id="wc-tab-moments" class="app-sub-view scroll-content" style="background:#fff;">
+      <div style="padding:15px; background:#f1f1f1;"><textarea id="wc-post-text" class="textarea-box" placeholder="这一刻的想法..."></textarea><button class="btn-primary w-100" style="background:#07C160; width:100%" onclick="postDynamic('wechat')">发表朋友圈</button></div>
+      <div id="moments-feed"></div>
+    </div>
+    <div id="wc-tab-me" class="app-sub-view scroll-content" style="background:#f4f4f4; padding:20px;">
+      <div class="list-item" style="border-radius:16px; margin-bottom:20px;"><i class="fa-solid fa-wallet" style="color:#07C160; font-size:24px; width:40px;"></i> <b>钱包 (虚拟币)</b><span style="margin-left:auto; color:var(--sys-red); font-weight:bold; font-size:18px;" id="vc-display">¥ 10000</span></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="active" onclick="switchTab('wechat','chats',this,'微信')"><i class="fa-solid fa-comment"></i>微信</div>
+      <div onclick="switchTab('wechat','moments',this,'朋友圈')"><i class="fa-regular fa-compass"></i>发现</div>
+      <div onclick="switchTab('wechat','me',this,'我')"><i class="fa-regular fa-user"></i>我</div>
+    </div>
+  </div>
+
+  <!-- ================= 拼多多 & 美团 (电商购物) ================= -->
+  <div id="shop-view" class="app-view">
+    <div class="app-header"><div class="back-btn" onclick="closeApp('shop-view')"><i class="fa-solid fa-chevron-left"></i></div><div class="title" id="shop-title">购物</div><div></div></div>
+    <div class="scroll-content">
+      <div class="feed-grid" id="shop-feed">
+        <!-- 初始居中按钮 -->
+        <button id="shop-refresh-btn" class="btn-primary center-refresh-btn" onclick="fetchShopItems()">获取最新商品</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Tinder ================= -->
+  <div id="tinder-view" class="app-view" style="background:#f1f2f6;">
+    <div class="app-header" style="border:none; background:transparent;"><div class="back-btn" onclick="closeApp('tinder-view')"><i class="fa-solid fa-chevron-left" style="color:#fd297b"></i></div><div class="title" style="color:#fd297b; font-size:24px;"><i class="fa-solid fa-fire"></i></div><div></div></div>
+    <div class="scroll-content" style="display:flex; flex-direction:column; justify-content:center; align-items:center; padding-bottom:120px;">
+      <div id="tinder-card">
+        <img id="td-img" src="https://picsum.photos/400/500?random=td" style="width:100%; height:75%; object-fit:cover;">
+        <div style="padding:15px; background:#fff; flex-grow:1;">
+          <h2 id="td-name" style="margin:0; font-size:24px;">寻找中... <span id="td-age" style="font-weight:400; font-size:20px;"></span></h2>
+          <p id="td-bio" style="color:gray; margin-top:5px; font-size:15px;">点击下方刷新获取匹配对象</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:30px; margin-top:20px;">
+        <button onclick="nextTinder(false)" style="width:65px; height:65px; border-radius:50%; border:none; background:#fff; color:#fd297b; font-size:30px; box-shadow:0 5px 15px rgba(0,0,0,0.1);"><i class="fa-solid fa-xmark"></i></button>
+        <button onclick="nextTinder(true)" style="width:65px; height:65px; border-radius:50%; border:none; background:#fff; color:#34C759; font-size:30px; box-shadow:0 5px 15px rgba(0,0,0,0.1);"><i class="fa-solid fa-heart"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 闲鱼 ================= -->
+  <div id="xianyu-view" class="app-view">
+    <div class="app-header" style="background:#FFDA00; color:#000;"><div class="back-btn" style="color:#000"></div><div class="title">闲鱼</div><div></div></div>
+    <div id="xianyu-tab-home" class="app-sub-view active scroll-content"><div class="feed-grid" id="xy-feed"><button id="xy-refresh-btn" class="btn-primary center-refresh-btn" style="background:#000; color:#FFDA00;" onclick="fetchXianyuItems()">刷新二手漏</button></div></div>
+    <div id="xianyu-tab-sell" class="app-sub-view scroll-content" style="padding:20px;">
+      <h3>发布闲置换钱</h3>
+      <input type="text" id="xy-sell-title" placeholder="商品标题 (例如: 99新 iPhone)" style="width:100%; padding:15px; border-radius:12px; border:1px solid #ddd; margin-bottom:10px;">
+      <input type="number" id="xy-sell-price" placeholder="出价格 (￥)" style="width:100%; padding:15px; border-radius:12px; border:1px solid #ddd; margin-bottom:15px;">
+      <button class="btn-primary" style="width:100%; background:#FFDA00; color:#000;" onclick="sellOnXianyu()">确认发布并等待买家(AI)</button>
+    </div>
+    <div class="bottom-nav">
+      <div class="active" onclick="switchTab('xianyu','home',this)"><i class="fa-solid fa-fish"></i>首页</div>
+      <div onclick="switchTab('xianyu','sell',this)"><i class="fa-solid fa-plus-circle"></i>卖闲置</div>
+    </div>
+  </div>
+
+  <!-- ================= 全局聊天界面 (通用私聊) ================= -->
+  <div id="chat-detail-view" class="app-view" style="z-index: 500;">
+    <div class="app-header" id="chat-header">
+      <div class="back-btn" onclick="closeChatDetail()"><i class="fa-solid fa-chevron-left"></i></div><div class="title" id="chat-with-name">聊天</div><div class="actions"></div>
+    </div>
+    <div id="chat-box" class="scroll-content" style="background:#f1f1f1; padding:15px;"></div>
+    <div style="position:absolute; bottom:0; left:0; width:100%; background:#f7f7f7; padding:10px 15px 30px; display:flex; gap:10px;">
+      <input type="text" id="msg-input" placeholder="发消息..." style="flex-grow:1; padding:12px; border:none; border-radius:8px; font-size:16px;">
+      <button onclick="sendChatMessage()" style="background:var(--sys-blue); color:#fff; border:none; padding:10px 15px; border-radius:8px;">发送</button>
+      <button onclick="generateAIReply()" style="background:#333; color:#fff; border:none; padding:10px 15px; border-radius:8px;">AI回复</button>
+    </div>
+  </div>
+
+  <!-- 弹窗 -->
+  <div class="modal" id="presetModal"><div class="modal-content"><h3>世界书 (API配置)</h3><textarea id="input-worldbook" rows="4" placeholder="世界观背景..."></textarea><input type="password" id="api-key" placeholder="OpenAI API Key (必填)"><div class="modal-actions"><button class="btn-primary" onclick="saveData()">保存</button><button class="btn-primary" style="background:#888" onclick="closeModal('presetModal')">关闭</button></div></div></div>
+  <div class="modal" id="settingsModal"><div class="modal-content"><h3>User 档案</h3><textarea id="input-mask" rows="3" placeholder="在AI眼中你是谁？"></textarea><div class="modal-actions"><button class="btn-primary" onclick="saveData()">保存</button><button class="btn-primary" style="background:#888" onclick="closeModal('settingsModal')">关闭</button></div></div></div>
+
+</div>
+</div>
+
+<script>
+  // --- 核心状态 ---
+  let apiKey = "", worldBook = "", userMask = "一个普通的地球人";
+  let virtualCoin = 10000;
+  let characters = [{ id: 1, name: "AI 助手", persona: "全能型AI伴侣", history: [] }];
+  let currentChatId = 1, currentShopPlatform = "";
+  let dynamics = { wechat: [], xhs: [], bili: [], yt: [], x: [], qq: [] }; // 存储各平台动态
+  
+  const SOCIAL_APPS = [
+    { id: 'xhs', name: '小红书', color: '#FF2442', icon: 'fa-book-open', type: 'image' },
+    { id: 'bili', name: '哔哩哔哩', color: '#FB7299', icon: 'fa-bilibili', type: 'video' },
+    { id: 'yt', name: 'YouTube', color: '#FF0000', icon: 'fa-youtube', type: 'video' },
+    { id: 'x', name: 'X', color: '#000000', icon: 'fa-x-twitter', type: 'text' },
+    { id: 'qq', name: 'QQ', color: '#12B7F5', icon: 'fa-qq', type: 'text' }
+  ];
+
+  // --- 初始化时间 ---
+  setInterval(() => {
+    const d = new Date();
+    document.getElementById('sb-time').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }, 1000);
+
+  // --- UI 交互 ---
+  function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+  function closeAllApps() { document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active')); }
+  
+  function openApp(appId) {
+    if(appId === 'pdd' || appId === 'meituan') {
+      currentShopPlatform = appId === 'pdd' ? '拼多多' : '美团';
+      document.getElementById('shop-title').innerText = currentShopPlatform;
+      document.getElementById('shop-title').style.color = appId === 'pdd' ? '#E02E24' : '#FFC300';
+      document.getElementById('shop-view').classList.add('active');
+      return;
+    }
+    const view = document.getElementById(`${appId}-view`);
+    if(view) {
+      view.classList.add('active');
+      if(appId === 'wechat') renderWechatContacts();
+    }
+  }
+
+  function switchTab(app, tab, el, title="") {
+    document.querySelectorAll(`#${app}-view .app-sub-view`).forEach(v => v.classList.remove('active'));
+    document.querySelectorAll(`#${app}-view .bottom-nav div`).forEach(d => d.classList.remove('active'));
+    document.getElementById(`${app}-tab-${tab}`).classList.add('active');
+    el.classList.add('active');
+    if(title && document.getElementById(`${app}-title`)) document.getElementById(`${app}-title`).innerText = title;
+    if(tab === 'msg') renderAppMessages(app);
+  }
+
+  function customIcon(e, name) {
+    e.preventDefault();
+    const url = prompt(`输入【${name}】的新图标外链:`);
+    if(url) { document.getElementById(`ic-${name}`).style.background = `url('${url}') center/cover`; document.getElementById(`ic-${name}`).innerHTML = ''; }
+  }
+
+  function saveData() {
+    apiKey = document.getElementById('api-key').value || apiKey;
+    worldBook = document.getElementById('input-worldbook').value;
+    userMask = document.getElementById('input-mask').value;
+    closeModal('presetModal'); closeModal('settingsModal'); alert("设定已保存");
+  }
+
+  function updateVC(amount) {
+    virtualCoin += amount;
+    document.getElementById('vc-display').innerText = `¥ ${virtualCoin}`;
+  }
+
+  // --- API 封装 ---
+  async function callAI(prompt, context="") {
+    if(!apiKey) { alert("请在【世界书】填写 API Key！"); return null; }
+    let sys = `世界设定:${worldBook}\n用户面具:${userMask}\n遵守严格格式输出。`;
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'gpt-3.5-turbo', messages: [{role:'system',content:sys}, {role:'user',content:prompt}] })
+      });
+      const data = await res.json();
+      return data.choices[0].message.content.trim();
+    } catch(e) { alert("API请求失败"); return null; }
+  }
+
+  // --- 动态生成所有社交APP的HTML结构 ---
+  function initSocialApps() {
+    const container = document.getElementById('dynamic-app-container');
+    let html = '';
+    SOCIAL_APPS.forEach(app => {
+      html += `
+      <div id="${app.id}-view" class="app-view">
+        <div class="app-header" style="background:${app.color}; color:#fff;">
+          <div class="back-btn" onclick="closeApp('${app.id}-view')" style="color:#fff"><i class="fa-solid fa-chevron-left"></i></div>
+          <div class="title" id="${app.id}-title">${app.name}</div>
+          <div class="actions"><i class="fa-solid fa-rotate-right" onclick="refreshDynamic('${app.id}')"></i></div>
+        </div>
+        
+        <!-- 首页信息流 -->
+        <div id="${app.id}-tab-home" class="app-sub-view active scroll-content">
+          <div class="${app.type === 'image' || app.type === 'video' ? 'feed-grid' : ''}" id="${app.id}-feed" style="padding:10px;"></div>
+        </div>
+        
+        <!-- 发布与我的动态 -->
+        <div id="${app.id}-tab-me" class="app-sub-view scroll-content" style="padding:15px;">
+          <textarea id="${app.id}-post-text" class="textarea-box" rows="3" placeholder="在 ${app.name} 分享点什么..."></textarea>
+          <button class="btn-primary w-100" style="background:${app.color}; width:100%; margin-bottom:20px;" onclick="postDynamic('${app.id}')">发布动态</button>
+          <h4 style="margin:10px 0;">我的发布</h4>
+          <div id="${app.id}-my-feed"></div>
+        </div>
+
+        <!-- 私信模块 (私聊) -->
+        <div id="${app.id}-tab-msg" class="app-sub-view scroll-content"><div id="${app.id}-msg-list"></div></div>
+
+        <!-- 底部导航 -->
+        <div class="bottom-nav">
+          <div class="active" onclick="switchTab('${app.id}','home',this,'${app.name}')"><i class="fa-solid fa-house"></i>首页</div>
+          <div onclick="switchTab('${app.id}','msg',this,'私信')"><i class="fa-solid fa-message"></i>私聊</div>
+          <div onclick="switchTab('${app.id}','me',this,'我的')"><i class="fa-solid fa-user"></i>我的</div>
+        </div>
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+  initSocialApps();
+
+  // --- 发动态逻辑 (各平台通用) ---
+  function postDynamic(appId) {
+    const input = document.getElementById(`${appId}-post-text`);
+    if(!input.value.trim()) return;
+    dynamics[appId].unshift(input.value);
+    input.value = '';
+    
+    // 渲染我的发布
+    if(appId === 'wechat') {
+      document.getElementById('moments-feed').innerHTML = dynamics.wechat.map(t => `<div class="list-item"><b>我:</b> <span style="margin-left:10px">${t}</span></div>`).join('');
+    } else {
+      document.getElementById(`${appId}-my-feed`).innerHTML = dynamics[appId].map(t => `<div class="list-item" style="border-radius:10px; margin-bottom:10px;">${t}</div>`).join('');
+    }
+    alert("发布成功！");
+  }
+
+  // --- AI 刷新各平台首页动态 ---
+  async function refreshDynamic(appId) {
+    const app = SOCIAL_APPS.find(a => a.id === appId);
+    const prompt = `生成1条适合在【${app.name}】发布的随机用户动态/帖子。只需纯文本内容。`;
+    const res = await callAI(prompt);
+    if(res) {
+      const feed = document.getElementById(`${appId}-feed`);
+      const img = `https://picsum.photos/400/300?random=${Math.random()}`;
+      if(app.type === 'text') {
+        feed.insertAdjacentHTML('afterbegin', `<div class="list-item" style="margin-bottom:10px; border-radius:10px; flex-direction:column; align-items:flex-start;"><b>@CyberNetizen</b><p style="margin:5px 0 0;">${res}</p></div>`);
+      } else {
+        feed.insertAdjacentHTML('afterbegin', `<div class="product-card"><img src="${img}" class="product-img"><div style="padding:10px; font-size:14px;">${res.substring(0,40)}...</div></div>`);
+      }
+    }
+  }
+
+  // --- 各App内的私聊列表 ---
+  function renderAppMessages(appId) {
+    document.getElementById(`${appId}-msg-list`).innerHTML = characters.map(c => `
+      <div class="list-item" onclick="openChatDetail(${c.id}, '${appId}')">
+        <div style="width:45px;height:45px;border-radius:50%;background:#333;color:#fff;display:flex;align-items:center;justify-content:center;margin-right:15px;font-size:20px;">${c.name[0]}</div>
+        <div><b style="font-size:16px;">${c.name}</b><p style="color:gray; font-size:13px; margin:3px 0 0;">点击聊天...</p></div>
+      </div>`).join('');
+  }
+
+  // --- 购物 (拼多多/美团) ---
+  async function fetchShopItems() {
+    const btn = document.getElementById('shop-refresh-btn');
+    btn.innerText = "加载中...";
+    const prompt = `生成8个【${currentShopPlatform}】上的商品。格式要求严格，每行一个商品，格式：商品名称|价格数字。例如：\n好喝的奶茶|15\n机械键盘|299`;
+    const res = await callAI(prompt);
+    if(res) {
+      const items = res.split('\n').filter(l => l.includes('|')).map(l => {
+        const p = l.split('|'); return { name: p[0].trim(), price: parseInt(p[1]) || 99 };
+      });
+      const html = items.map(i => `
+        <div class="product-card">
+          <img src="https://picsum.photos/400/300?random=${Math.random()}" class="product-img">
+          <div style="padding:10px;">
+            <div style="font-size:14px; height:40px; overflow:hidden;">${i.name}</div>
+            <div style="color:red; font-size:18px; font-weight:bold; margin-top:5px;">¥${i.price}</div>
+            <button class="btn-primary btn-sm" style="width:100%; margin-top:8px;" onclick="buyItem(${i.price}, '${i.name}')">购买</button>
+          </div>
+        </div>`).join('');
+      
+      const feed = document.getElementById('shop-feed');
+      feed.innerHTML += html;
+      
+      // 按钮移到底部
+      btn.classList.add('moved');
+      btn.innerText = "获取更多";
+      feed.appendChild(btn); // 移动到 grid 最后
+    } else {
+      btn.innerText = "重试";
+    }
+  }
+
+  function buyItem(price, name) {
+    if(virtualCoin >= price) {
+      updateVC(-price); alert(`成功购买 [${name}]，花费 ¥${price}！`);
+    } else { alert("余额不足！"); }
+  }
+
+  // --- Tinder 功能 ---
+  let tempTinderProfile = null;
+  async function nextTinder(liked) {
+    if(liked && tempTinderProfile) {
+      // 模拟匹配几率
+      if(Math.random() > 0.3) {
+        alert("🎉 匹配成功！已添加到您的联系人列表，可以开始私聊啦！");
+        characters.push({ id: Date.now(), name: tempTinderProfile.name, persona: tempTinderProfile.bio, history: [] });
+      } else { alert("对方没有滑你 :("); }
+    }
+    
+    document.getElementById('td-name').innerText = "AI 正在寻找...";
+    document.getElementById('td-bio').innerText = "请稍候...";
+    
+    const prompt = `生成1个Tinder交友档案。严格格式：名字|年龄|一句撩人的个人签名。例如：Lily|22|寻找周末一起喝咖啡的人`;
+    const res = await callAI(prompt);
+    if(res && res.includes('|')) {
+      const p = res.split('|');
+      tempTinderProfile = { name: p[0], age: p[1], bio: p[2] };
+      document.getElementById('td-img').src = `https://picsum.photos/400/500?random=${Math.random()}`;
+      document.getElementById('td-name').innerText = p[0] + " ";
+      document.getElementById('td-age').innerText = p[1];
+      document.getElementById('td-bio').innerText = p[2];
+    }
+  }
+
+  // --- 闲鱼功能 ---
+  async function fetchXianyuItems() {
+    const btn = document.getElementById('xy-refresh-btn');
+    btn.innerText = "搜索中...";
+    const res = await callAI("生成8个闲鱼二手商品。格式要求严格，每行一个商品，格式：商品名称|价格数字。例如：\n99新iPhone|3000\n自用单车|50");
+    if(res) {
+      const items = res.split('\n').filter(l => l.includes('|')).map(l => { const p = l.split('|'); return { name: p[0], price: parseInt(p[1])||10 }; });
+      const html = items.map(i => `
+        <div class="product-card">
+          <img src="https://picsum.photos/400/300?random=${Math.random()}" class="product-img">
+          <div style="padding:10px;"><div style="font-size:14px;">${i.name}</div><div style="color:red; font-size:18px; font-weight:bold;">¥${i.price}</div><button class="btn-primary btn-sm" style="width:100%; margin-top:5px; background:#FFDA00; color:#000;" onclick="buyItem(${i.price}, '${i.name}')">马上秒</button></div>
+        </div>`).join('');
+      const feed = document.getElementById('xy-feed');
+      feed.innerHTML += html;
+      btn.classList.add('moved'); btn.innerText = "换一批"; feed.appendChild(btn);
+    }
+  }
+
+  async function sellOnXianyu() {
+    const title = document.getElementById('xy-sell-title').value;
+    const price = parseInt(document.getElementById('xy-sell-price').value);
+    if(!title || !price) return;
+    alert("发布成功！AI买家正在浏览中...");
+    document.getElementById('xy-sell-title').value = ''; document.getElementById('xy-sell-price').value = '';
+    
+    // 模拟AI随机购买
+    setTimeout(async () => {
+      if(Math.random() > 0.2) {
+        updateVC(price);
+        alert(`🔔 闲鱼捷报！您的商品 [${title}] 已被 AI 买家拍下，入账 ¥${price}！`);
+      } else {
+        alert(`🔔 闲鱼通知：您的商品 [${title}] 暂时无人问津。`);
+      }
+    }, 4000);
+  }
+
+  // --- 全局聊天引擎 (微信/私聊 通用) ---
+  function renderWechatContacts() {
+    document.getElementById('contact-list-container').innerHTML = characters.map(c => `
+      <div class="list-item" onclick="openChatDetail(${c.id}, 'wechat')">
+        <div style="width:48px;height:48px;border-radius:12px;background:#07C160;color:#fff;display:flex;align-items:center;justify-content:center;margin-right:15px;font-size:20px;">${c.name[0]}</div>
+        <div><b style="font-size:16px;">${c.name}</b><p style="color:gray; font-size:13px; margin:3px 0 0;">${c.history.length>0 ? c.history[c.history.length-1].content.substring(0,10)+'...' : '新朋友'}</p></div>
+      </div>`).join('');
+  }
+
+  function openChatDetail(id, sourceApp) {
+    currentChatId = id;
+    const char = characters.find(c => c.id === id);
+    document.getElementById('chat-with-name').innerText = char.name;
+    
+    // 根据来源APP改变聊天头部颜色
+    const header = document.getElementById('chat-header');
+    if(sourceApp === 'wechat') { header.style.background = '#f7f7f7'; header.style.color = '#000'; }
+    else { 
+      const sa = SOCIAL_APPS.find(a=>a.id===sourceApp);
+      header.style.background = sa ? sa.color : '#f7f7f7';
+      header.style.color = sa ? '#fff' : '#000';
+    }
+    
+    document.getElementById('chat-detail-view').classList.add('active');
+    renderChatBox();
+  }
+
+  function closeChatDetail() { document.getElementById('chat-detail-view').classList.remove('active'); renderWechatContacts(); }
+
+  function renderChatBox() {
+    const char = characters.find(c => c.id === currentChatId);
+    const box = document.getElementById('chat-box');
+    box.innerHTML = char.history.map(m => `
+      <div style="display:flex; margin-bottom:15px; ${m.role==='user'?'flex-direction:row-reverse':''}">
+        <div style="width:40px;height:40px;border-radius:10px;background:${m.role==='user'?'#007AFF':'#333'};color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${m.role==='user'?'我':char.name[0]}</div>
+        <div style="padding:10px 15px; border-radius:15px; background:${m.role==='user'?'#95ec69':'#fff'}; max-width:70%; margin:0 10px; word-break:break-all; box-shadow:0 1px 2px rgba(0,0,0,0.05);">${m.content}</div>
+      </div>`).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function sendChatMessage() {
+    const input = document.getElementById('msg-input');
+    if(!input.value.trim()) return;
+    characters.find(c => c.id === currentChatId).history.push({ role: 'user', content: input.value });
+    input.value = ''; renderChatBox();
+  }
+
+  async function generateAIReply() {
+    const char = characters.find(c => c.id === currentChatId);
+    if(char.history.length === 0) return;
+    const ctx = char.history.slice(-6).map(m => `${m.role==='user'?'User':char.name}: ${m.content}`).join('\n');
+    let sys = `扮演角色【${char.name}】。设定：${char.persona}。用口语化的风格与User聊天。限制50字内。`;
+    const reply = await callAI(sys, ctx);
+    if(reply) { char.history.push({ role: 'ai', content: reply }); renderChatBox(); }
+  }
+
+</script>
+</body>
+</html>
