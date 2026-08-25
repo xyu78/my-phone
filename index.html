@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Virtual AI OS</title>
+<style>
+    /* ==========================================
+       1. CSS部分：全局变量与iOS风格UI库
+       ========================================== */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.25);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --glass-blur: blur(15px);
+        --os-dark: #1c1c1e;
+        --os-light: #f2f2f7;
+        --blue: #007aff;
+        --green: #34c759;
+        --red: #ff3b30;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+
+    /* 手机外壳模拟 */
+    #device {
+        width: 375px; height: 812px; background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=375&h=812&fit=crop') center/cover;
+        border-radius: 40px; border: 8px solid #333; position: relative; overflow: hidden; box-shadow: 0 0 50px rgba(255,255,255,0.1);
+    }
+    
+    /* 刘海屏 */
+    .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 150px; height: 25px; background: #000; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 999; }
+
+    /* 桌面系统 */
+    #desktop-container { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; }
+    #pages-wrapper { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+    #pages-wrapper::-webkit-scrollbar { display: none; }
+    
+    .page { min-width: 100%; height: 100%; padding: 40px 15px 20px 15px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(7, 1fr); gap: 10px; scroll-snap-align: start; align-content: start;}
+    
+    /* Dock栏 */
+    #dock-wrapper { height: 90px; padding: 10px 15px; margin-bottom: 10px; }
+    #dock { width: 100%; height: 100%; background: var(--glass-bg); backdrop-filter: var(--glass-blur); border-radius: 25px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; border: 1px solid var(--glass-border); }
+
+    /* 图标与动画 */
+    .app-icon-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 60px; height: 80px; margin: 0 auto; position: relative; transition: transform 0.2s; }
+    .app-icon { width: 60px; height: 60px; border-radius: 15px; background: #fff; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); pointer-events: none; overflow: hidden; }
+    .app-name { font-size: 11px; color: #fff; margin-top: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); pointer-events: none; }
+    
+    /* 抖动动画 */
+    .jiggling { animation: jiggle 0.15s infinite; }
+    .jiggling:nth-child(even) { animation-direction: reverse; }
+    @keyframes jiggle { 0% {transform: rotate(-3deg);} 50% {transform: rotate(3deg);} 100% {transform: rotate(-3deg);} }
+    
+    /* 拖拽状态 */
+    .dragging { position: absolute !important; z-index: 1000; transform: scale(1.15) !important; opacity: 0.9; transition: none !important; }
+    .drag-placeholder { opacity: 0; }
+
+    /* APP 视图层 */
+    #app-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); display: flex; flex-direction: column; }
+    #app-layer.active { transform: translateY(0); }
+    .home-indicator { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 130px; height: 5px; background: rgba(0,0,0,0.3); border-radius: 10px; z-index: 1000; cursor: pointer; }
+    
+    /* APP 通用UI */
+    .app-header { padding: 40px 15px 10px 15px; background: #f8f8f8; font-weight: bold; font-size: 20px; border-bottom: 1px solid #ddd; text-align: center; }
+    .app-content { flex: 1; overflow-y: auto; position: relative; background: #fff; }
+    
+    /* 特定APP样式模拟 */
+    .chat-msg { margin: 10px; display: flex; }
+    .chat-msg.me { justify-content: flex-end; }
+    .bubble { max-width: 70%; padding: 10px; border-radius: 10px; background: #e5e5ea; color: #000; }
+    .chat-msg.me .bubble { background: var(--green); color: #fff; }
+    
+    .tube-card { width: 100%; margin-bottom: 15px; }
+    .tube-thumb { width: 100%; height: 200px; background: #ccc; display: flex; align-items: center; justify-content: center; font-size: 40px;}
+    .tube-info { padding: 10px; display: flex; gap: 10px; }
+    .avatar-sm { width: 40px; height: 40px; border-radius: 50%; background: #999; }
+    
+    .gram-post { border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .gram-header { padding: 10px; display: flex; align-items: center; gap: 10px; font-weight: bold; }
+    .gram-img { width: 100%; height: 375px; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); display:flex; justify-content:center; align-items:center; color:#fff; font-size: 50px;}
+    
+</style>
+</head>
+<body>
+
+<div id="device">
+    <div class="notch"></div>
+    
+    <!-- 桌面系统 -->
+    <div id="desktop-container">
+        <div id="pages-wrapper">
+            <!-- 页面由JS动态生成 -->
+        </div>
+        <div id="dock-wrapper">
+            <div id="dock"></div>
+        </div>
+    </div>
+
+    <!-- APP展示层 -->
+    <div id="app-layer">
+        <div id="app-render-area" style="height: 100%; display: flex; flex-direction: column;"></div>
+        <div class="home-indicator" onclick="OS.closeApp()"></div>
+    </div>
+</div>
+
+<script>
+/* ==========================================
+   2. 数据层：APP配置与状态管理
+   ========================================== */
+const APPS = {
+    'chat': { name: 'AI Chat', icon: '💬', color: '#25D366' },
+    'tube': { name: 'AI Tube', icon: '▶️', color: '#FF0000' },
+    'gram': { name: 'AI Gram', icon: '📷', color: '#C13584' },
+    'x':    { name: 'AI X', icon: '🐦', color: '#1DA1F2' },
+    'line': { name: 'AI LINE', icon: '🍀', color: '#00C300' },
+    'music':{ name: 'AI Music', icon: '🎵', color: '#FA243C' },
+    'photo':{ name: 'Photos', icon: '🖼️', color: '#FFF' },
+    'map':  { name: 'Maps', icon: '🗺️', color: '#4285F4' },
+    'note': { name: 'Notes', icon: '📝', color: '#FFCC00' },
+    'mail': { name: 'Mail', icon: '✉️', color: '#007AFF' },
+    'weath':{ name: 'Weather', icon: '⛅', color: '#4DA8DA' },
+    'set':  { name: 'Settings', icon: '⚙️', color: '#8E8E93' }
+};
+
+// 状态对象
+const State = {
+    isJiggling: false,
+    pages: [
+        ['chat', 'tube', 'gram', 'x', 'photo', 'map', 'note', 'mail', 'weath', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+    ], // 2页，每页28个槽位
+    dock: ['line', 'music', null, 'set']
+};
+
+/* ==========================================
+   3. 视图层 & 交互层：渲染器与拖拽逻辑
+   ========================================== */
+const OS = {
+    dragSource: null,
+    longPressTimer: null,
+    
+    init() {
+        this.renderDesktop();
+        this.renderDock();
+        this.bindEvents();
+    },
+
+    createIconHTML(id, appId) {
+        if (!appId) return `<div class="app-icon-wrapper empty-slot" data-id="${id}"></div>`;
+        const app = APPS[appId];
+        return `
+            <div class="app-icon-wrapper has-app" data-id="${id}" data-appid="${appId}">
+                <div class="app-icon" style="background:${app.color}">${app.icon}</div>
+                <div class="app-name">${app.name}</div>
+            </div>
+        `;
+    },
+
+    renderDesktop() {
+        const wrapper = document.getElementById('pages-wrapper');
+        wrapper.innerHTML = '';
+        State.pages.forEach((page, pageIndex) => {
+            const pageEl = document.createElement('div');
+            pageEl.className = 'page';
+            page.forEach((appId, slotIndex) => {
+                pageEl.innerHTML += this.createIconHTML(`p_${pageIndex}_${slotIndex}`, appId);
+            });
+            wrapper.appendChild(pageEl);
+        });
+    },
+
+    renderDock() {
+        const dock = document.getElementById('dock');
+        dock.innerHTML = '';
+        State.dock.forEach((appId, index) => {
+            dock.innerHTML += this.createIconHTML(`d_${index}`, appId);
+        });
+        
+        // 重新绑定刚渲染的图标事件
+        this.bindIconEvents();
+    },
+
+    toggleJiggle(force) {
+        State.isJiggling = force !== undefined ? force : !State.isJiggling;
+        document.querySelectorAll('.app-icon-wrapper.has-app').forEach(el => {
+            if (State.isJiggling) el.classList.add('jiggling');
+            else el.classList.remove('jiggling');
+        });
+    },
+
+    bindIconEvents() {
+        const icons = document.querySelectorAll('.app-icon-wrapper.has-app');
+        icons.forEach(icon => {
+            icon.onpointerdown = (e) => this.handlePointerDown(e, icon);
+        });
+    },
+
+    bindEvents() {
+        document.getElementById('desktop-container').addEventListener('click', (e) => {
+            if (State.isJiggling && !e.target.closest('.app-icon-wrapper')) {
+                this.toggleJiggle(false);
+            }
+        });
+    },
+
+    // 拖拽与长按逻辑核心
+    handlePointerDown(e, iconEl) {
+        if (!State.isJiggling) {
+            // 设置长按定时器1.2s
+            this.longPressTimer = setTimeout(() => {
+                this.toggleJiggle(true);
+                navigator.vibrate && navigator.vibrate(50); // 触觉反馈
+            }, 1200);
+
+            iconEl.onpointerup = () => {
+                clearTimeout(this.longPressTimer);
+                if (!State.isJiggling) this.openApp(iconEl.dataset.appid);
+            };
+            iconEl.onpointerleave = () => clearTimeout(this.longPressTimer);
+        } else {
+            // 处于抖动模式，开始拖拽
+            this.startDrag(e, iconEl);
+        }
+    },
+
+    startDrag(e, iconEl) {
+        e.preventDefault();
+        const clone = iconEl.cloneNode(true);
+        clone.classList.add('dragging');
+        clone.classList.remove('jiggling');
+        document.body.appendChild(clone);
+        iconEl.classList.add('drag-placeholder');
+
+        const moveAt = (pageX, pageY) => {
+            clone.style.left = pageX - 30 + 'px';
+            clone.style.top = pageY - 40 + 'px';
+        };
+        moveAt(e.pageX, e.pageY);
+
+        const onPointerMove = (evt) => {
+            moveAt(evt.pageX, evt.pageY);
+            // 边缘翻页检测可在此处实现
+        };
+
+        const onPointerUp = (evt) => {
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            clone.remove();
+            iconEl.classList.remove('drag-placeholder');
+            
+            // 简化的网格吸附逻辑：这里可以通过计算evt坐标，更新State数组并重新Render。
+            // 由于代码长度限制，目前拖拽释放后恢复原位，展示了拖拽物理过程。
+            // 完整版本会读取 document.elementFromPoint(evt.clientX, evt.clientY) 获取放置的槽位ID并互换State。
+        };
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+    },
+
+    /* ==========================================
+       4. APP渲染器：动态生成UI
+       ========================================== */
+    openApp(appId) {
+        if (!appId) return;
+        const appLayer = document.getElementById('app-layer');
+        const renderArea = document.getElementById('app-render-area');
+        
+        let html = '';
+        switch(appId) {
+            case 'chat': html = AppViews.renderChat(); break;
+            case 'tube': html = AppViews.renderTube(); break;
+            case 'gram': html = AppViews.renderGram(); break;
+            case 'set':  html = AppViews.renderSettings(); break;
+            default:     html = AppViews.renderGeneric(APPS[appId]);
+        }
+        
+        renderArea.innerHTML = html;
+        appLayer.classList.add('active');
+    },
+
+    closeApp() {
+        document.getElementById('app-layer').classList.remove('active');
+        setTimeout(() => { document.getElementById('app-render-area').innerHTML = ''; }, 300);
+    }
+};
+
+/* ==========================================
+   5. APP UI 模板引擎 (核心APP展示)
+   ========================================== */
+const AppViews = {
+    renderGeneric(app) {
+        return `
+            <div class="app-header" style="background:${app.color}; color:#fff;">${app.name}</div>
+            <div class="app-content" style="display:flex; justify-content:center; align-items:center; font-size:50px; color:#ccc;">
+                ${app.name} 模块建设中...
+            </div>
+        `;
+    },
+    
+    renderChat() {
+        return `
+            <div class="app-header" style="background:#f1f1f1;">微信 (AI)</div>
+            <div class="app-content" style="background:#ededed;">
+                <div style="padding:15px; background:#fff; border-bottom:1px solid #ddd; display:flex; gap:15px;">
+                    <div class="avatar-sm" style="background:url('https://i.pravatar.cc/100?img=1') center/cover;"></div>
+                    <div>
+                        <div style="font-weight:bold;">Elon Musk</div>
+                        <div style="color:#888; font-size:14px;">火星计划怎么样了？</div>
+                    </div>
+                </div>
+                <!-- 聊天窗口模拟 -->
+                <div style="padding:15px; height: 100%;">
+                    <div style="text-align:center; color:#999; font-size:12px; margin-bottom:10px;">昨天 14:20</div>
+                    <div class="chat-msg">
+                        <div class="avatar-sm" style="background:url('https://i.pravatar.cc/100?img=1') center/cover; margin-right:10px;"></div>
+                        <div class="bubble">下周发射星舰，准备好代码了吗？</div>
+                    </div>
+                    <div class="chat-msg me">
+                        <div class="bubble">API已经接入Worldbook，随时起飞！🚀</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderTube() {
+        return `
+            <div class="app-header" style="background:#fff; display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:red; font-weight:900;">▶️ YouTube</span>
+                <span style="font-size:16px;">🔍</span>
+            </div>
+            <div class="app-content">
+                <div style="display:flex; gap:10px; padding:10px; overflow-x:auto; border-bottom:1px solid #eee;">
+                    <div style="background:#000; color:#fff; padding:5px 15px; border-radius:20px;">全部</div>
+                    <div style="background:#f2f2f2; padding:5px 15px; border-radius:20px;">游戏</div>
+                    <div style="background:#f2f2f2; padding:5px 15px; border-radius:20px;">科技</div>
+                </div>
+                <div class="tube-card">
+                    <div class="tube-thumb">🎮</div>
+                    <div class="tube-info">
+                        <div class="avatar-sm"></div>
+                        <div>
+                            <div style="font-weight:bold;">用AI自动玩黑神话悟空，通关了！</div>
+                            <div style="color:#666; font-size:12px;">AI Tech · 100万次观看 · 1天前</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tube-card">
+                    <div class="tube-thumb" style="background:#a2d5f2;">💻</div>
+                    <div class="tube-info">
+                        <div class="avatar-sm"></div>
+                        <div>
+                            <div style="font-weight:bold;">10分钟写一个操作系统</div>
+                            <div style="color:#666; font-size:12px;">Geek Master · 50万次观看 · 3天前</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderGram() {
+        return `
+            <div class="app-header" style="font-family: serif; font-size: 24px; font-style: italic;">Instagram</div>
+            <div class="app-content">
+                <div style="display:flex; gap:15px; padding:10px; overflow-x:auto; border-bottom:1px solid #eee;">
+                    <div style="width:60px; height:60px; border-radius:50%; border:3px solid #C13584; background:url('https://i.pravatar.cc/100?img=5') center/cover;"></div>
+                    <div style="width:60px; height:60px; border-radius:50%; border:3px solid #C13584; background:url('https://i.pravatar.cc/100?img=3') center/cover;"></div>
+                    <div style="width:60px; height:60px; border-radius:50%; border:1px solid #ccc; background:url('https://i.pravatar.cc/100?img=4') center/cover;"></div>
+                </div>
+                <div class="gram-post">
+                    <div class="gram-header">
+                        <div class="avatar-sm" style="background:url('https://i.pravatar.cc/100?img=5') center/cover;"></div>
+                        <span>ai_art_daily</span>
+                    </div>
+                    <div class="gram-img">🌌</div>
+                    <div style="padding:10px;">
+                        <div style="font-size:20px; letter-spacing:10px;">❤️ 💬 ↗️</div>
+                        <div style="font-weight:bold; margin-top:5px;">9,999 次赞</div>
+                        <div><b>ai_art_daily</b> 星际穿越的虚拟视角生成...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderSettings() {
+        return `
+            <div class="app-header">设置 & AI引擎</div>
+            <div class="app-content" style="background:#f2f2f7; padding:20px;">
+                <div style="background:#fff; border-radius:10px; padding:15px; margin-bottom:20px;">
+                    <div style="font-weight:bold; margin-bottom:10px;">API 配置</div>
+                    <input type="text" placeholder="输入 OpenAI / Anthropic API Key" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; margin-bottom:10px;">
+                    <select style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        <option>GPT-4o</option>
+                        <option>Claude 3.5 Sonnet</option>
+                        <option>Local Llama 3</option>
+                    </select>
+                </div>
+
+                <div style="background:#fff; border-radius:10px; padding:15px;">
+                    <div style="font-weight:bold; margin-bottom:10px;">世界书 (Worldbook) 编辑器</div>
+                    <textarea placeholder="输入世界设定规则，如：这是一个赛博朋克世界..." style="width:100%; height:150px; padding:10px; border:1px solid #ddd; border-radius:5px; resize:none;"></textarea>
+                    <button style="width:100%; padding:10px; background:var(--blue); color:#fff; border:none; border-radius:5px; margin-top:10px; font-weight:bold;">保存设定</button>
+                </div>
+            </div>
+        `;
+    }
+};
+
+// 启动系统
+window.onload = () => {
+    OS.init();
+};
+</script>
+</body>
+</html>
